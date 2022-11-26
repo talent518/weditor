@@ -1,9 +1,12 @@
 # coding: utf-8
 #
-from asyncio import Future
+from asyncio import Future, get_event_loop
 from logzero import logger
 from weditor.web.device import get_device
 from tornado.websocket import websocket_connect, WebSocketHandler
+import pyaudio
+import time
+import threading
 
 cached_devices = {}
 
@@ -42,7 +45,10 @@ class ClientHandler(object):
         else:
             # logger.debug("client message: %s", message)
             for handler in self.handlers:
-                handler.write_message(message, isinstance(message, bytes))
+                try:
+                    handler.write_message(message, isinstance(message, bytes))
+                except:
+                    pass
             if isinstance(message, str) and message.__contains__(" "):
                 key, val = message.split(" ", maxsplit=1)
                 self.strs[key] = val
@@ -86,7 +92,7 @@ class MiniCapHandler(BaseHandler):
         logger.info("MiniCap opened: %s", self.id)
 
     def on_message(self, message):
-        logger.info("MiniCap message: %s", message)
+        # logger.info("MiniCap message: %s", message)
         self.d.write_message(message)
 
     def on_close(self):
@@ -105,10 +111,71 @@ class MiniTouchHandler(BaseHandler):
         logger.info("MiniTouch opened: %s", id)
 
     def on_message(self, message):
-        logger.info("MiniTouch message: %s", message)
+        # logger.info("MiniTouch message: %s", message)
         self.d.write_message(message)
 
     def on_close(self):
         logger.info("MiniTouch closed")
         self.d.del_handler(self)
         self.d = None
+
+RATE = 16000
+CHANNELS = 2
+SECONDS = 0.1
+CHUNK_LENGTH = int(RATE * SECONDS)
+FORMAT = pyaudio.paInt16
+
+class Sound(object):
+    audio: pyaudio.PyAudio = None
+    stream: pyaudio.Stream = None
+    handlers: list[BaseHandler] = None
+    
+    def __init__(self) -> None:
+        self.handlers = []
+    
+    def open(self):
+        if self.audio is None or self.stream is None:
+            self.audio = pyaudio.PyAudio()
+            self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK_LENGTH, stream_callback=self.callback)
+            self.stream.start_stream()
+    
+    def callback(self, in_data, frame_count, time_info, status):
+        for h in self.handlers:
+            h.loop.call_soon_threadsafe(h.write_message, in_data, True)
+        
+        return b"", pyaudio.paContinue
+    
+    def add_handler(self, handler: BaseHandler):
+        logger.info("sound add_handler")
+        self.handlers.append(handler)
+    
+    def del_handler(self, handler: BaseHandler):
+        logger.info("sound del_handler")
+        self.handlers.remove(handler)
+
+    def close(self):
+        if len(self.handlers) == 0:
+            if self.stream is not None:
+                self.stream.stop_stream()
+                self.stream = None
+            if self.audio is not None:
+                self.audio.terminate()
+                self.audio = None
+
+sound: Sound = Sound()
+sound.open()
+# sound.close()
+
+class MiniSoundHandler(BaseHandler):
+    loop = None
+    
+    def open(self):
+        self.loop = get_event_loop()
+        sound.add_handler(self)
+
+    def on_message(self, message):
+        pass
+
+    def on_close(self):
+        sound.del_handler(self)
+
