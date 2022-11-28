@@ -284,7 +284,7 @@ class DevicePressHandler(BaseHandler):
         key = self.get_argument("key")
         logger.info("Serial: %s", serial)
         d = get_device(serial)
-        ret = d.device.keyevent(key)
+        ret = d.device.press(key)
         self.write({"ret": ret})
 
 def formatsize(size: int):
