@@ -121,7 +121,7 @@ class MiniTouchHandler(BaseHandler):
 
 RATE = 16000
 CHANNELS = 2
-SECONDS = 0.1
+SECONDS = 0.05
 CHUNK_LENGTH = int(RATE * SECONDS)
 FORMAT = pyaudio.paInt16
 
