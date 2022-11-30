@@ -119,7 +119,7 @@ class MiniTouchHandler(BaseHandler):
         self.d.del_handler(self)
         self.d = None
 
-RATE = 16000
+RATE = 44100
 CHANNELS = 2
 SECONDS = 0.05
 CHUNK_LENGTH = int(RATE * SECONDS)
