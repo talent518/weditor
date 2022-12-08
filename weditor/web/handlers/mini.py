@@ -128,7 +128,7 @@ FORMAT = pyaudio.paInt16
 class Sound(object):
     audio: pyaudio.PyAudio = None
     stream: pyaudio.Stream = None
-    handlers: list[BaseHandler] = None
+    handlers: list = None
     
     def __init__(self) -> None:
         self.handlers = []
