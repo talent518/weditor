@@ -307,6 +307,6 @@ class ListHandler(BaseHandler):
         for name in os.listdir(self.root):
             st = os.stat(os.path.join(self.root, name))
             t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
-            files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t})
+            files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime})
         files.sort(key = filetime, reverse = True)
         self.render("list.html", files=files)

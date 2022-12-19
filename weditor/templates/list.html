@@ -26,7 +26,7 @@
 	</tr>
 	{% for f in files %}
 	<tr>
-		<td><a href="{{f["name"]}}">{{f["name"]}}</a></td>
+		<td><a href="{{f["name"]}}?mtime={{f["mtime"]}}">{{f["name"]}}</a></td>
 		<td title="{{f["size"]}}" class="r">{{f["fsize"]}}</td>
 		<td>{{f["time"]}}</td>
 	</tr>
