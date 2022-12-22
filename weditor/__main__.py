@@ -20,7 +20,7 @@ from logzero import logger
 from tornado.log import enable_pretty_logging
 from weditor.web.device import stop_device
 
-from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler
+from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
@@ -192,6 +192,7 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     tornado.ioloop.IOLoop.instance().start()
     # tornado.ioloop.IOLoop.instance().add_callback(consume_queue)
 
+    sound.close()
     stop_device(uploadPath)
     
     if os.path.exists(PID_FILEPATH):

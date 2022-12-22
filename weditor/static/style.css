@@ -239,3 +239,36 @@ div.ace_gutter-cell.ace_code_exercised { /* code already runed
 .prop-value {
   white-space: pre;
 }
+
+.audio {
+  position: relative;
+  margin: 0 5px;
+  overflow: hidden;
+  background-color: #333;
+}
+
+.audio > span {
+  position: absolute;
+  top: 0;
+  width: 0px;
+  height: 100%;
+}
+
+.audio > span.left {
+  left: 0;
+  background: linear-gradient(to right, #15ff00, #0fb900);
+}
+
+.audio > span.right {
+  left: 50%;
+  background: linear-gradient(to right, #0091ff, #2051ff);
+}
+
+.audio > canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}

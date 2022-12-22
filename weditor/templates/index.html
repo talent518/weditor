@@ -61,6 +61,7 @@
             <el-switch v-model="liveScreen" active-text="实时" inactive-text="静态">
             </el-switch>
           </template>
+          <button v-on:click="syncSound()" class="btn btn-default"><template v-if="player">停止声音</template><template v-else>播放声音</template></button>
         </form>
         <ul class="nav navbar-nav navbar-right">
           <!-- <li><a href="#">Link</a></li> -->
@@ -195,6 +196,7 @@
               <input v-model="useXPathOnly" type="checkbox"> 强制使用XPath
             </label>
           </div>
+          <div class="mgbtm audio" v-show="player" ref="audio" @click="resizeAudio()" :style="{height: audioHeight + 'px'}"><span class="left" title="左声道" ref="audioLeft"></span><span class="right" title="右声道" ref="audioRight"></span><canvas ref="audioWave"></canvas></div>
         </div>
       </div>
       <div class="vertical-gap"></div>
@@ -309,6 +311,7 @@
 <script src="/unpkg.com/element-ui/lib/index.js"></script>
 
 <script src="{{static_url('js/common.js')}}"></script>
+<script src="{{static_url('js/pcm-player.js')}}"></script>
 <script src="{{static_url('js/index.js')}}"></script>
 
 <!-- Baidu Analytics -->

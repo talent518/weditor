@@ -7,6 +7,8 @@ from tornado.websocket import websocket_connect, WebSocketHandler
 import pyaudio
 import time
 import threading
+import math
+import struct
 
 cached_devices = {}
 
@@ -129,17 +131,44 @@ class Sound(object):
     audio: pyaudio.PyAudio = None
     stream: pyaudio.Stream = None
     handlers: list = None
+    music: bytes = None
+    thrd: threading.Thread = None
+    running: bool = True
     
     def __init__(self) -> None:
         self.handlers = []
     
     def open(self):
         if self.audio is None or self.stream is None:
-            self.audio = pyaudio.PyAudio()
-            self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK_LENGTH, stream_callback=self.callback)
-            self.stream.start_stream()
+            try:
+                self.audio = pyaudio.PyAudio()
+                self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK_LENGTH, stream_callback=self.callback)
+                self.stream.start_stream()
+                # raise Exception("Test Exception")
+                logger.info("Successfully opened the recording function")
+            except:
+                logger.warn("Failed to open the recording function")
+                self.close()
+                music = bytearray(CHUNK_LENGTH * CHANNELS * 2)
+                offset = 0
+                n = (CHUNK_LENGTH / 50)
+                for i in range(CHUNK_LENGTH):
+                    angle = math.radians(i * 360.0 / n)
+                    struct.pack_into("h", music, offset, int(math.sin(angle) * 30000))
+                    offset += 2
+                    struct.pack_into("h", music, offset, int(math.cos(angle) * 30000))
+                    offset += 2
+                self.music = bytes(music)
+
+                def do_timeout():
+                    while self.running:
+                        self.callback(self.music, CHUNK_LENGTH)
+                        time.sleep(5)
+
+                self.thrd = threading.Thread(target=do_timeout,args=(),name='循环子线程')
+                self.thrd.start()
     
-    def callback(self, in_data, frame_count, time_info, status):
+    def callback(self, in_data, frame_count, time_info = None, status = None):
         for h in self.handlers:
             h.loop.call_soon_threadsafe(h.write_message, in_data, True)
         
@@ -154,17 +183,19 @@ class Sound(object):
         self.handlers.remove(handler)
 
     def close(self):
-        if len(self.handlers) == 0:
-            if self.stream is not None:
-                self.stream.stop_stream()
-                self.stream = None
-            if self.audio is not None:
-                self.audio.terminate()
-                self.audio = None
+        if self.stream is not None:
+            self.stream.stop_stream()
+            self.stream = None
+        if self.audio is not None:
+            self.audio.terminate()
+            self.audio = None
+        if self.thrd is not None:
+            self.running = False
+            self.thrd.join()
+            self.thrd = None
 
 sound: Sound = Sound()
 sound.open()
-# sound.close()
 
 class MiniSoundHandler(BaseHandler):
     loop = None
@@ -178,4 +209,3 @@ class MiniSoundHandler(BaseHandler):
 
     def on_close(self):
         sound.del_handler(self)
-

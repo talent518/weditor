@@ -60,7 +60,10 @@ window.vm = new Vue({
         offset: 0,
         current: -1,
       }
-    }
+    },
+    isRecordStop: true,
+    player: false,
+    audioHeight: 25,
   },
   watch: {
     platform: function (newval) {
@@ -230,6 +233,114 @@ window.vm = new Vue({
     // this.loadLiveScreen();
   },
   methods: {
+    resizeAudio: function () {
+      if(this.audioHeight >= 200) {
+        this.audioHeight = 25;
+      } else {
+        this.audioHeight *= 2;
+      }
+    },
+    syncSound: function () {
+      if(this.player) {
+        this.player.destroy();
+        this.player.wsClose();
+        return;
+      }
+      const wsUrl = 'ws://' + location.host + '/ws/v1/minisound';
+      const self = this;
+      const RATE = 44100;
+      let ws;
+      self.player = new PCMPlayer({
+        inputCodec: 'Int16',
+        channels: 2,
+        sampleRate: RATE,
+        flushTime: 200,
+      });
+      self.player.volume(1);
+      self.player.wsClose = function() {
+        self.player = false;
+        if(ws) {
+          ws.close();
+          ws = null;
+        }
+      };
+
+      const $els = [this.$refs.audioLeft, this.$refs.audioRight];
+      const $cvs = this.$refs.audioWave;
+      const cvs = $cvs.getContext('2d');
+      const calc = function(data) {
+      const width = $cvs.clientWidth / 2, height = $cvs.clientHeight;
+      $cvs.setAttribute('width', width * 2);
+      $cvs.setAttribute('height', height);
+      cvs.reset();
+      cvs.clearRect(0, 0, width * 2, height);
+      if(self.isFullCvs) {
+        $els.forEach(e=>{
+          e.style.width = '0px';
+        });
+      } else {
+        data = new Int16Array(data);
+        const frames = data.length / 2, stepX = width / frames;
+        const sums = [0, 0];
+        let x, y, n;
+        for(let j = 0; j < 2; j ++) {
+          x = j * width;
+          cvs.beginPath();
+          for(let i = j; i < data.length; i += 2) {
+            sums[j] += Math.abs(data[i]);
+
+            n = height / 2;
+            y = n - n * data[i] / 32767;
+            if(i == j) cvs.moveTo(x, y);
+            else cvs.lineTo(x, y);
+            x += stepX;
+          }
+          cvs.lineWidth = 1;
+          cvs.strokeStyle = '#FFFFFF';
+          cvs.lineJoin = "miter";
+          cvs.stroke();
+          cvs.closePath();
+        }
+        sums.forEach((v, k)=>{
+          const dB = Math.min(100, v * 500.0 / (frames * 32767));
+
+          $els[k].style.width = (dB / 2) + '%';
+        });
+      }
+      };
+
+      const wsConn = function() {
+        if(!self.player) return;
+
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer';
+        ws.onopen = function() {
+          console.log("minisound connected")
+          // self.player.feed(new ArrayBuffer(4 * RATE * 0.100));
+          // self.player.flush();
+        };
+        ws.onmessage = function(e) {
+          // console.log("minisound recv", e.data)
+          if(self.player) {
+            self.player.feed(e.data);
+            // self.player.flush();
+            calc(e.data);
+          } else {
+            ws.close();
+          }
+        };
+        ws.onerror = function(e) {
+        };
+        ws.onclose = function() {
+          console.log("minisound closed")
+          ws = null;
+
+          if(self.player) setTimeout(wsConn, 1000);
+        }
+      };
+
+      wsConn();
+    },
     checkVersion: function () {
       $.ajax({
         url: LOCAL_URL + "api/v1/version",

@@ -6,6 +6,7 @@ cached_property
 pywin32; sys_platform == 'win32'
 pyaudio
 wave
+struct
 
 # third-party dependencies
 uiautomator2>=2.10.1
