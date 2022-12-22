@@ -101,6 +101,9 @@ def mock_stdout_stderr(prefix="WRT:"):
                 except Exception as e:
                     raise QuitError("Output exception", str(e))
 
+            def flush(self):
+                pass
+
         sys.stdout = sys.stderr = MockStdout()
         yield _stdout, _stderr  # lambda s: _stdout.write(s+"\n")
     finally:
