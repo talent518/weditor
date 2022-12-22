@@ -64,6 +64,7 @@ window.vm = new Vue({
     isRecordStop: true,
     player: false,
     audioHeight: 25,
+    deviceAddress: '',
   },
   watch: {
     platform: function (newval) {
@@ -487,6 +488,7 @@ window.vm = new Vue({
         .then((ret) => {
           console.log("deviceId", ret.deviceId)
           this.deviceId = ret.deviceId
+          this.deviceAddress = ret.deviceAddress.replace(/^ws:\/\//, 'http://')
           this.miniCapUrl = ret.miniCapUrl
           this.runPython(this.generatePreloadCode())
         })
