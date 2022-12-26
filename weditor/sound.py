@@ -27,4 +27,4 @@ while True:
 
 capture.stop_stream()
 player.stop_stream()
-audio.close()
+audio.terminate()
