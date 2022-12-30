@@ -204,7 +204,6 @@ class DeviceWidgetListHandler(BaseHandler):
 
 class DeviceScreenshotHandler(BaseHandler):
     def get(self, serial):
-        logger.info("Serial: %s", serial)
         try:
             d = get_device(serial)
             buffer = io.BytesIO()
@@ -256,7 +255,6 @@ class FloatWindowHandler(BaseHandler):
 class DeviceSizeHandler(BaseHandler):
     def post(self):
         serial = self.get_argument("serial")
-        logger.info("Serial: %s", serial)
         d = get_device(serial)
         w, h = d.device.window_size()
         self.write({"width": w, "height": h})
@@ -267,7 +265,6 @@ class DeviceTouchHandler(BaseHandler):
         action = self.get_argument("action")
         x = int(self.get_argument("x"))
         y = int(self.get_argument("y"))
-        logger.info("Serial: %s", serial)
         d = get_device(serial)
         if action == 'down':
             d.device.touch.down(x, y)
@@ -285,7 +282,6 @@ class DevicePressHandler(BaseHandler):
     def post(self):
         serial = self.get_argument("serial")
         key = self.get_argument("key")
-        logger.info("Serial: %s", serial)
         if reNum.match(key):
             key = int(key)
         logger.info("PRESS KEY = " + json.dumps(key))
