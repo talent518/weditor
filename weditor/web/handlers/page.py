@@ -9,6 +9,7 @@ import math
 import traceback
 import time
 import tornado
+import re
 from logzero import logger
 from PIL import Image
 from tornado.escape import json_decode
@@ -278,11 +279,16 @@ class DeviceTouchHandler(BaseHandler):
             d.device.click(x, y)
         self.write({"success": True})
 
+reNum = re.compile('^\d+$')
+
 class DevicePressHandler(BaseHandler):
     def post(self):
         serial = self.get_argument("serial")
         key = self.get_argument("key")
         logger.info("Serial: %s", serial)
+        if reNum.match(key):
+            key = int(key)
+        logger.info("PRESS KEY = " + json.dumps(key))
         d = get_device(serial)
         ret = d.device.press(key)
         self.write({"ret": ret})
