@@ -24,7 +24,7 @@ from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoun
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
-    DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler,
+    DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotQueue,
     DeviceWidgetListHandler, MainHandler, VersionHandler, WidgetPreviewHandler,
     DeviceSizeHandler, DeviceTouchHandler, DevicePressHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
 from .web.handlers.proxy import StaticProxyHandler
@@ -194,10 +194,12 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
 
     sound.close()
     stop_device(uploadPath)
+    shotQueue.put(None)
     
     if os.path.exists(PID_FILEPATH):
         os.unlink(PID_FILEPATH)
 
+    sys.exit("Exited")
 
 def create_shortcut():
     if os.name != 'nt':

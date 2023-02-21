@@ -10,17 +10,18 @@ import traceback
 import time
 import tornado
 import re
+import threading
+import queue
 from logzero import logger
 from PIL import Image
 from tornado.escape import json_decode
+from tornado.ioloop import IOLoop
+from tornado.concurrent import Future
 
-from ..utils import current_ip
-
-from ..device import connect_device, get_device
+from ..device import get_device
 from ..version import __version__
 
 pathjoin = os.path.join
-
 
 class BaseHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
@@ -201,27 +202,58 @@ class DeviceWidgetListHandler(BaseHandler):
             "data": widget_data,
         })
 
-
-class DeviceScreenshotHandler(BaseHandler):
-    def get(self, serial):
+def screenshot():
+    while True:
+        req = shotQueue.get()
+        if req is None:
+            break
+        logger.warn("screenshot begin")
         try:
-            d = get_device(serial)
+            d = get_device("android:")
             buffer = io.BytesIO()
             d.screenshot().convert("RGB").save(buffer, format='JPEG')
             b64data = base64.b64encode(buffer.getvalue())
-            response = {
+            code = 200
+            msg = "OK"
+            data = {
                 "type": "jpeg",
                 "encoding": "base64",
                 "data": b64data.decode('utf-8'),
             }
-            self.write(response)
         except EnvironmentError as e:
-            traceback.print_exc()
-            self.set_status(500, "Environment Error")
-            self.write({"description": str(e)})
+            code = 500
+            msg = "Environment Error"
+            data = {"description": str(e)}
         except RuntimeError as e:
-            self.set_status(500)  # Gone
-            self.write({"description": traceback.format_exc()})
+            code = 500
+            msg = "Gone"
+            data = {"description": traceback.format_exc()}
+        logger.warn("screenshot end")
+        
+        while True:
+            req.loop.call_soon_threadsafe(req.set_status_and_write, code, msg, data)
+            try:
+                req = shotQueue.get_nowait()
+            except:
+                break
+
+shotThread = threading.Thread(target = screenshot, name = 'Screenshot')
+shotQueue = queue.Queue(maxsize=10)
+shotThread.start()
+
+class DeviceScreenshotHandler(BaseHandler):
+    loop: IOLoop = None
+    future: Future = None
+    async def get(self, serial):
+        self.future = Future()
+        self.loop = self.future.get_loop()
+        shotQueue.put(self)
+        await self.future
+
+    def set_status_and_write(self, code, msg, data):
+        self.set_status(code, msg)
+        self.write(data)
+        self.future.set_result(None)
 
 class DeviceScreenrecordHandler(BaseHandler):
     root = None
