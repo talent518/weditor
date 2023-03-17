@@ -26,7 +26,7 @@
 	</tr>
 	{% for f in files %}
 	<tr>
-		<td><a href="{{f["name"]}}?mtime={{f["mtime"]}}">{{f["name"]}}</a></td>
+		<td>{% if f["isdir"] %}<a href="?dir={{dir}}{{f["name"]}}/">{{f["name"]}}</a>{%else%}<a href="{{dir}}{{f["name"]}}?mtime={{f["mtime"]}}">{{f["name"]}}</a>{% end %}</td>
 		<td title="{{f["size"]}}" class="r">{{f["fsize"]}}</td>
 		<td>{{f["time"]}}</td>
 	</tr>

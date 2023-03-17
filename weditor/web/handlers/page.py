@@ -337,10 +337,19 @@ class ListHandler(BaseHandler):
     def initialize(self, path: str) -> None:
         self.root = path
     def get(self):
+        dir = self.get_argument("dir", default="", strip=False)
+        root = self.root
+        if dir is not None:
+            root = os.path.join(self.root, dir)
         files = []
-        for name in os.listdir(self.root):
-            st = os.stat(os.path.join(self.root, name))
-            t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
-            files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime})
-        files.sort(key = filetime, reverse = True)
-        self.render("list.html", files=files)
+        try:
+            for name in os.listdir(root):
+                file = os.path.join(root, name)
+                st = os.stat(file)
+                t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
+                files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime, "isdir": os.path.isdir(file)})
+            files.sort(key = filetime, reverse = True)
+            self.render("list.html", files=files, dir=dir)
+        except:
+            self.set_status(404)
+            self.write("Not found: " + dir)
