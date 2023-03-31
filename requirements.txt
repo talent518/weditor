@@ -8,5 +8,5 @@ pyaudio
 wave
 
 # third-party dependencies
-uiautomator2>=2.10.1
+uiautomator2>=2.16.22
 facebook-wda>=1.0.5
