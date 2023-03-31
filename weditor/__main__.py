@@ -262,8 +262,10 @@ def main():
 
     if args.channels is None:
         args.channels = sound.getChannels(args.device)
-        if args.channels == 0:
+        if args.channels == 0 or args.channels > 2:
             args.channels = 2
+    elif args.channels > 2:
+        args.channels = 2
 
     setChannels(args.channels)
     sound.open(input_device_index=args.device, channels=args.channels)

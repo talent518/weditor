@@ -157,17 +157,20 @@ class Sound(object):
                 # raise Exception("Test Exception")
                 logger.info("Successfully opened the recording function")
             except:
-                logger.warn("Failed to open the recording function")
+                logger.warn("Failed to open the recording function, channels: %d", channels)
                 self.close()
                 music = bytearray(frames * channels * 2)
                 offset = 0
                 n = (frames / 50)
                 for i in range(frames):
                     angle = math.radians(i * 360.0 / n)
-                    struct.pack_into("h", music, offset, int(math.sin(angle) * 30000))
-                    offset += 2
-                    struct.pack_into("h", music, offset, int(math.cos(angle) * 30000))
-                    offset += 2
+                    if channels > 0:
+                        struct.pack_into("h", music, offset, int(math.sin(angle) * 30000))
+                        offset += 2
+                    if channels > 1:
+                        struct.pack_into("h", music, offset, int(math.cos(angle) * 30000))
+                        offset += 2
+
                 self.music = bytes(music)
 
                 def do_timeout():
