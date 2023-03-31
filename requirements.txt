@@ -1,4 +1,4 @@
-tornado>=4.3
+tornado>=6.2
 six
 pillow
 logzero
