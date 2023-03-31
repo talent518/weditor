@@ -50,9 +50,15 @@ class VersionHandler(BaseHandler):
         self.write(ret)
 
 
+channels=2
+def setChannels(c:int):
+    global channels
+    channels=c
+
+
 class MainHandler(BaseHandler):
     def get(self):
-        self.render("index.html")
+        self.render("index.html", channels=channels)
 
 
 class DeviceConnectHandler(BaseHandler):

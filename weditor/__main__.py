@@ -25,7 +25,7 @@ from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoun
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
     DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotThread, shotQueue,
-    DeviceWidgetListHandler, MainHandler, VersionHandler, WidgetPreviewHandler,
+    DeviceWidgetListHandler, setChannels, MainHandler, VersionHandler, WidgetPreviewHandler,
     DeviceSizeHandler, DeviceTouchHandler, DevicePressHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
 from .web.handlers.proxy import StaticProxyHandler
 from .web.handlers.shell import PythonShellHandler
@@ -233,6 +233,7 @@ def main():
     ap = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     ap.add_argument("-d", "--device", type=int, default=None, help="sound input device index")
+    ap.add_argument("-c", "--channels", type=int, default=None, help="capture sound channel number")
     ap.add_argument("-v", "--version", action="store_true", help="show version")
     ap.add_argument('-q', '--quiet', action='store_true', help='quite mode, no open new browser')
     ap.add_argument('-p', '--port', type=int, default=17310, help='local listen port for weditor')
@@ -245,21 +246,27 @@ def main():
 
     if args.version:
         print(__version__)
-        exit(0)
+        return
 
     if args.shortcut:
         create_shortcut()
-        exit(0)
+        return
     
     if args.quit:
         cmd_quit(args.port)
-        exit(0)
+        return
 
     if sys.platform == 'win32' and sys.version_info[:2] >= (3, 8):
         import asyncio
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    sound.open(input_device_index=args.device)
+    if args.channels is None:
+        args.channels = sound.getChannels(args.device)
+        if args.channels == 0:
+            args.channels = 2
+
+    setChannels(args.channels)
+    sound.open(input_device_index=args.device, channels=args.channels)
     shotThread.start()
 
     open_browser = not args.quiet and not args.debug
