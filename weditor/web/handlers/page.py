@@ -23,6 +23,13 @@ from ..version import __version__
 
 pathjoin = os.path.join
 
+
+channels=2
+def setChannels(c:int):
+    global channels
+    channels=c
+
+
 class BaseHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -43,17 +50,13 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class VersionHandler(BaseHandler):
     def get(self):
+        global channels
         ret = {
             'name': "weditor",
             'version': __version__,
+            'channels': channels,
         }
         self.write(ret)
-
-
-channels=2
-def setChannels(c:int):
-    global channels
-    channels=c
 
 
 class MainHandler(BaseHandler):
@@ -63,7 +66,6 @@ class MainHandler(BaseHandler):
 
 class DeviceConnectHandler(BaseHandler):
     def post(self):
-        global channels
         platform = self.get_argument("platform").lower()
         device_url = self.get_argument("deviceUrl")
 
@@ -73,7 +75,6 @@ class DeviceConnectHandler(BaseHandler):
             ret = {
                 "deviceId": id,
                 'success': True,
-                'channels': channels,
             }
             if platform == "android":
                 ret['deviceAddress'] = d.device.address.replace("http://", "ws://") # yapf: disable
