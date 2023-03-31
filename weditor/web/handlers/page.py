@@ -63,6 +63,7 @@ class MainHandler(BaseHandler):
 
 class DeviceConnectHandler(BaseHandler):
     def post(self):
+        global channels
         platform = self.get_argument("platform").lower()
         device_url = self.get_argument("deviceUrl")
 
@@ -72,6 +73,7 @@ class DeviceConnectHandler(BaseHandler):
             ret = {
                 "deviceId": id,
                 'success': True,
+                'channels': channels,
             }
             if platform == "android":
                 ret['deviceAddress'] = d.device.address.replace("http://", "ws://") # yapf: disable

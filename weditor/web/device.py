@@ -175,4 +175,4 @@ def get_device(id):
 def stop_device(path):
     for d in cached_devices.values():
         d.stop_screenrecord(path)
-        d.device.reset_uiautomator('Stop Device')
+        # d.device.reset_uiautomator('Stop Device')
