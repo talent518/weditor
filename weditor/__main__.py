@@ -24,8 +24,8 @@ from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoun
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
-    DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotQueue,
-    DeviceWidgetListHandler, MainHandler, VersionHandler, WidgetPreviewHandler,
+    DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotThread, shotQueue,
+    DeviceWidgetListHandler, setChannels, MainHandler, VersionHandler, WidgetPreviewHandler,
     DeviceSizeHandler, DeviceTouchHandler, DevicePressHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
 from .web.handlers.proxy import StaticProxyHandler
 from .web.handlers.shell import PythonShellHandler
@@ -195,6 +195,7 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     sound.close()
     stop_device(uploadPath)
     shotQueue.put(None)
+    shotThread.join(5)
     
     if os.path.exists(PID_FILEPATH):
         os.unlink(PID_FILEPATH)
@@ -231,6 +232,8 @@ def main():
     # yapf: disable
     ap = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument("-d", "--device", type=int, default=None, help="sound input device index")
+    ap.add_argument("-c", "--channels", type=int, default=None, help="capture sound channel number")
     ap.add_argument("-v", "--version", action="store_true", help="show version")
     ap.add_argument('-q', '--quiet', action='store_true', help='quite mode, no open new browser')
     ap.add_argument('-p', '--port', type=int, default=17310, help='local listen port for weditor')
@@ -256,6 +259,17 @@ def main():
     if sys.platform == 'win32' and sys.version_info[:2] >= (3, 8):
         import asyncio
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    if args.channels is None:
+        args.channels = sound.getChannels(args.device)
+        if args.channels == 0 or args.channels > 2:
+            args.channels = 2
+    elif args.channels > 2:
+        args.channels = 2
+
+    setChannels(args.channels)
+    sound.open(input_device_index=args.device, channels=args.channels)
+    shotThread.start()
 
     open_browser = not args.quiet and not args.debug
     run_web(args.debug, args.port, open_browser, args.force_quit)

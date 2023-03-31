@@ -65,6 +65,7 @@ window.vm = new Vue({
     player: false,
     audioHeight: 25,
     deviceAddress: '',
+    channels: 2,
   },
   watch: {
     platform: function (newval) {
@@ -253,7 +254,7 @@ window.vm = new Vue({
       let ws;
       self.player = new PCMPlayer({
         inputCodec: 'Int16',
-        channels: 2,
+        channels: this.channels,
         sampleRate: RATE,
         flushTime: 200,
       });
@@ -269,45 +270,45 @@ window.vm = new Vue({
       const $els = [this.$refs.audioLeft, this.$refs.audioRight];
       const $cvs = this.$refs.audioWave;
       const cvs = $cvs.getContext('2d');
+      const channels = this.channels;
       const calc = function(data) {
-      const width = $cvs.clientWidth / 2, height = $cvs.clientHeight;
-      $cvs.setAttribute('width', width * 2);
-      $cvs.setAttribute('height', height);
-      cvs.reset();
-      cvs.clearRect(0, 0, width * 2, height);
-      if(self.isFullCvs) {
-        $els.forEach(e=>{
-          e.style.width = '0px';
-        });
-      } else {
-        data = new Int16Array(data);
-        const frames = data.length / 2, stepX = width / frames;
-        const sums = [0, 0];
-        let x, y, n;
-        for(let j = 0; j < 2; j ++) {
-          x = j * width;
-          cvs.beginPath();
-          for(let i = j; i < data.length; i += 2) {
-            sums[j] += Math.abs(data[i]);
+        const width = $cvs.clientWidth / channels, height = $cvs.clientHeight;
+        $cvs.setAttribute('width', width * channels);
+        $cvs.setAttribute('height', height);
+        cvs.reset();
+        cvs.clearRect(0, 0, width * channels, height);
+        if(self.isFullCvs) {
+          $els.forEach(e=>{
+            e.style.width = '0px';
+          });
+        } else {
+          data = new Int16Array(data);
+          const frames = data.length / channels, stepX = width / frames;
+          let x, y, n;
+          console.log(channels, frames, stepX);
+          for(let j = 0; j < channels; j ++) {
+            let sum = 0;
+            x = j * width;
+            cvs.beginPath();
+            for(let i = j; i < data.length; i += channels) {
+              sum += Math.abs(data[i]);
 
-            n = height / 2;
-            y = n - n * data[i] / 32767;
-            if(i == j) cvs.moveTo(x, y);
-            else cvs.lineTo(x, y);
-            x += stepX;
+              n = height / 2;
+              y = n - n * data[i] / 32767;
+              if(i == j) cvs.moveTo(x, y);
+              else cvs.lineTo(x, y);
+              x += stepX;
+            }
+            cvs.lineWidth = 1;
+            cvs.strokeStyle = '#FFFFFF';
+            cvs.lineJoin = "miter";
+            cvs.stroke();
+            cvs.closePath();
+
+            const dB = Math.min(100, sum * 500.0 / (frames * 32767));
+            $els[j].style.width = (dB / channels) + '%';
           }
-          cvs.lineWidth = 1;
-          cvs.strokeStyle = '#FFFFFF';
-          cvs.lineJoin = "miter";
-          cvs.stroke();
-          cvs.closePath();
         }
-        sums.forEach((v, k)=>{
-          const dB = Math.min(100, v * 500.0 / (frames * 32767));
-
-          $els[k].style.width = (dB / 2) + '%';
-        });
-      }
       };
 
       const wsConn = function() {

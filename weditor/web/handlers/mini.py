@@ -121,12 +121,6 @@ class MiniTouchHandler(BaseHandler):
         self.d.del_handler(self)
         self.d = None
 
-RATE = 44100
-CHANNELS = 2
-SECONDS = 0.05
-CHUNK_LENGTH = int(RATE * SECONDS)
-FORMAT = pyaudio.paInt16
-
 class Sound(object):
     audio: pyaudio.PyAudio = None
     stream: pyaudio.Stream = None
@@ -138,31 +132,50 @@ class Sound(object):
     def __init__(self) -> None:
         self.handlers = []
     
-    def open(self):
+    def getChannels(self, device):
+        if self.audio is None:
+            self.audio = pyaudio.PyAudio()
+        
+        if device is None:
+            info = self.audio.get_default_input_device_info()
+        else:
+            info = self.audio.get_device_info_by_index(device)
+        
+        return info["maxInputChannels"]
+    
+    def open(self, input_device_index=None, channels=2, rate=44100, frames=None):
         if self.audio is None or self.stream is None:
-            try:
+            if frames is None:
+                frames = int(rate * 0.05) # 每秒20帧
+
+            if self.audio is None:
                 self.audio = pyaudio.PyAudio()
-                self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK_LENGTH, stream_callback=self.callback)
+            
+            try:
+                self.stream = self.audio.open(format=pyaudio.paInt16, channels=channels, rate=rate, input=True, frames_per_buffer=frames, stream_callback=self.callback, input_device_index=input_device_index)
                 self.stream.start_stream()
                 # raise Exception("Test Exception")
-                logger.info("Successfully opened the recording function")
+                logger.info("Successfully opened the recording function, channels: %d", channels)
             except:
-                logger.warn("Failed to open the recording function")
+                logger.warn("Failed to open the recording function, channels: %d", channels)
                 self.close()
-                music = bytearray(CHUNK_LENGTH * CHANNELS * 2)
+                music = bytearray(frames * channels * 2)
                 offset = 0
-                n = (CHUNK_LENGTH / 50)
-                for i in range(CHUNK_LENGTH):
+                n = (frames / 50)
+                for i in range(frames):
                     angle = math.radians(i * 360.0 / n)
-                    struct.pack_into("h", music, offset, int(math.sin(angle) * 30000))
-                    offset += 2
-                    struct.pack_into("h", music, offset, int(math.cos(angle) * 30000))
-                    offset += 2
+                    if channels > 0:
+                        struct.pack_into("h", music, offset, int(math.sin(angle) * 30000))
+                        offset += 2
+                    if channels > 1:
+                        struct.pack_into("h", music, offset, int(math.cos(angle) * 30000))
+                        offset += 2
+
                 self.music = bytes(music)
 
                 def do_timeout():
                     while self.running:
-                        self.callback(self.music, CHUNK_LENGTH)
+                        self.callback(self.music, frames)
                         time.sleep(5)
 
                 self.thrd = threading.Thread(target=do_timeout,args=(),name='循环子线程')
@@ -195,7 +208,6 @@ class Sound(object):
             self.thrd = None
 
 sound: Sound = Sound()
-sound.open()
 
 class MiniSoundHandler(BaseHandler):
     loop = None

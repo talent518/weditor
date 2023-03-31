@@ -23,6 +23,13 @@ from ..version import __version__
 
 pathjoin = os.path.join
 
+
+channels=2
+def setChannels(c:int):
+    global channels
+    channels=c
+
+
 class BaseHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -43,16 +50,18 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class VersionHandler(BaseHandler):
     def get(self):
+        global channels
         ret = {
             'name': "weditor",
             'version': __version__,
+            'channels': channels,
         }
         self.write(ret)
 
 
 class MainHandler(BaseHandler):
     def get(self):
-        self.render("index.html")
+        self.render("index.html", channels=channels)
 
 
 class DeviceConnectHandler(BaseHandler):
@@ -239,7 +248,6 @@ def screenshot():
 
 shotThread = threading.Thread(target = screenshot, name = 'Screenshot')
 shotQueue = queue.Queue(maxsize=10)
-shotThread.start()
 
 class DeviceScreenshotHandler(BaseHandler):
     loop: IOLoop = None
@@ -337,10 +345,19 @@ class ListHandler(BaseHandler):
     def initialize(self, path: str) -> None:
         self.root = path
     def get(self):
+        dir = self.get_argument("dir", default="", strip=False)
+        root = self.root
+        if dir is not None:
+            root = os.path.join(self.root, dir)
         files = []
-        for name in os.listdir(self.root):
-            st = os.stat(os.path.join(self.root, name))
-            t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
-            files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime})
-        files.sort(key = filetime, reverse = True)
-        self.render("list.html", files=files)
+        try:
+            for name in os.listdir(root):
+                file = os.path.join(root, name)
+                st = os.stat(file)
+                t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
+                files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime, "isdir": os.path.isdir(file)})
+            files.sort(key = filetime, reverse = True)
+            self.render("list.html", files=files, dir=dir)
+        except:
+            self.set_status(404)
+            self.write("Not found: " + dir)
