@@ -239,7 +239,6 @@ def screenshot():
 
 shotThread = threading.Thread(target = screenshot, name = 'Screenshot')
 shotQueue = queue.Queue(maxsize=10)
-shotThread.start()
 
 class DeviceScreenshotHandler(BaseHandler):
     loop: IOLoop = None

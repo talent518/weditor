@@ -138,11 +138,11 @@ class Sound(object):
     def __init__(self) -> None:
         self.handlers = []
     
-    def open(self):
+    def open(self, input_device_index=None):
         if self.audio is None or self.stream is None:
             try:
                 self.audio = pyaudio.PyAudio()
-                self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK_LENGTH, stream_callback=self.callback)
+                self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK_LENGTH, stream_callback=self.callback, input_device_index=input_device_index)
                 self.stream.start_stream()
                 # raise Exception("Test Exception")
                 logger.info("Successfully opened the recording function")
@@ -195,7 +195,6 @@ class Sound(object):
             self.thrd = None
 
 sound: Sound = Sound()
-sound.open()
 
 class MiniSoundHandler(BaseHandler):
     loop = None

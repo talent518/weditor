@@ -24,7 +24,7 @@ from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoun
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
-    DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotQueue,
+    DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotThread, shotQueue,
     DeviceWidgetListHandler, MainHandler, VersionHandler, WidgetPreviewHandler,
     DeviceSizeHandler, DeviceTouchHandler, DevicePressHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
 from .web.handlers.proxy import StaticProxyHandler
@@ -195,6 +195,7 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     sound.close()
     stop_device(uploadPath)
     shotQueue.put(None)
+    shotThread.join(5)
     
     if os.path.exists(PID_FILEPATH):
         os.unlink(PID_FILEPATH)
@@ -231,6 +232,7 @@ def main():
     # yapf: disable
     ap = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument("-d", "--device", type=int, default=None, help="sound input device index")
     ap.add_argument("-v", "--version", action="store_true", help="show version")
     ap.add_argument('-q', '--quiet', action='store_true', help='quite mode, no open new browser')
     ap.add_argument('-p', '--port', type=int, default=17310, help='local listen port for weditor')
@@ -243,19 +245,22 @@ def main():
 
     if args.version:
         print(__version__)
-        return
+        exit(0)
 
     if args.shortcut:
         create_shortcut()
-        return
+        exit(0)
     
     if args.quit:
         cmd_quit(args.port)
-        return
+        exit(0)
 
     if sys.platform == 'win32' and sys.version_info[:2] >= (3, 8):
         import asyncio
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    sound.open(input_device_index=args.device)
+    shotThread.start()
 
     open_browser = not args.quiet and not args.debug
     run_web(args.debug, args.port, open_browser, args.force_quit)
