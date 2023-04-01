@@ -1,6 +1,6 @@
 # coding: utf-8
 #
-from asyncio import Future, get_event_loop
+from asyncio import Future, get_event_loop, ensure_future
 from logzero import logger
 from weditor.web.device import get_device
 from tornado.websocket import websocket_connect, WebSocketHandler
@@ -13,8 +13,37 @@ import struct
 cached_devices = {}
 
 class BaseHandler(WebSocketHandler):
+    isSent = True
+    msg = None
+    bin = None
+    
     def check_origin(self, origin: str):
         return True
+    
+    def send_message(self, msg, bin=False):
+        if self.isSent:
+            self.isSent = False
+            fut = self.write_message(msg, bin)
+            
+            async def wrapper() -> None:
+                try:
+                    await fut
+                except:
+                    pass
+                
+                self.isSent = True
+                
+                if self.msg is not None:
+                    msg = self.msg
+                    bin = self.bin
+                    self.msg = None
+                    self.bin = None
+                    self.send_message(msg, bin)
+
+            return ensure_future(wrapper())
+        else:
+            self.msg = msg
+            self.bin = bin
 
 class ClientHandler(object):
     conn = None
@@ -48,7 +77,10 @@ class ClientHandler(object):
             # logger.debug("client message: %s", message)
             for handler in self.handlers:
                 try:
-                    handler.write_message(message, isinstance(message, bytes))
+                    if isinstance(message, bytes):
+                        handler.send_message(message, True)
+                    else:
+                        handler.write_message(message, False)
                 except:
                     pass
             if isinstance(message, str) and message.__contains__(" "):
@@ -183,7 +215,7 @@ class Sound(object):
     
     def callback(self, in_data, frame_count, time_info = None, status = None):
         for h in self.handlers:
-            h.loop.call_soon_threadsafe(h.write_message, in_data, True)
+            h.loop.call_soon_threadsafe(h.send_message, in_data, True)
         
         return b"", pyaudio.paContinue
     

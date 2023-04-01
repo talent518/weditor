@@ -275,7 +275,6 @@ window.vm = new Vue({
         const width = $cvs.clientWidth / channels, height = $cvs.clientHeight;
         $cvs.setAttribute('width', width * channels);
         $cvs.setAttribute('height', height);
-        cvs.reset();
         cvs.clearRect(0, 0, width * channels, height);
         if(self.isFullCvs) {
           $els.forEach(e=>{
