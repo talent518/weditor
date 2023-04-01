@@ -23,24 +23,27 @@ class BaseHandler(WebSocketHandler):
     def send_message(self, msg, bin=False):
         if self.isSent:
             self.isSent = False
-            fut = self.write_message(msg, bin)
+            try:
+                fut = self.write_message(msg, bin)
             
-            async def wrapper() -> None:
-                try:
-                    await fut
-                except:
-                    pass
-                
-                self.isSent = True
-                
-                if self.msg is not None:
-                    msg = self.msg
-                    bin = self.bin
-                    self.msg = None
-                    self.bin = None
-                    self.send_message(msg, bin)
+                async def wrapper() -> None:
+                    try:
+                        await fut
+                    except:
+                        pass
+                    
+                    self.isSent = True
+                    
+                    if self.msg is not None:
+                        msg = self.msg
+                        bin = self.bin
+                        self.msg = None
+                        self.bin = None
+                        self.send_message(msg, bin)
 
-            return ensure_future(wrapper())
+                ensure_future(wrapper())
+            except:
+                self.isSent = True
         else:
             self.msg = msg
             self.bin = bin
