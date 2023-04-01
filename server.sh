@@ -9,4 +9,15 @@ if [ -n "$d" ]; then
     arg="$arg -d $d"
 fi
 
-daemon -rU --name weditor --chdir=$PWD --stdout $PWD/stdout.log --stderr $PWD/stderr.log -- python -m weditor $arg
+daemon --stop --name weditor
+
+PIDFILE="$HOME/.weditor/weditor.pid"
+if [ -f "$PIDFILE" ]; then
+    PID=$(cat "$PIDFILE")
+    if [ -n "$PID" -a -d "/proc/$PID" ]; then
+        kill $PID
+        while [ -d "/proc/$PID" ]; do sleep 1;done
+    fi
+    rm -vf "$PIDFILE"
+fi
+daemon -rU -M 1000000 -L 10 --name weditor --chdir=$PWD --stdout $PWD/stdout.log --stderr $PWD/stderr.log -- python -m weditor $arg
