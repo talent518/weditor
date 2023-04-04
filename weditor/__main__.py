@@ -266,6 +266,7 @@ def main():
             if args.channels == 0 or args.channels > 2:
                 args.channels = 2
         except:
+            args.device = None
             args.channels = 1
     elif args.channels > 2:
         args.channels = 2
