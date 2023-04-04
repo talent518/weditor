@@ -171,12 +171,16 @@ class Sound(object):
         if self.audio is None:
             self.audio = pyaudio.PyAudio()
         
-        if device is None:
-            info = self.audio.get_default_input_device_info()
-        else:
-            info = self.audio.get_device_info_by_index(device)
-        
-        return info["maxInputChannels"]
+        try:
+            if device is None:
+                info = self.audio.get_default_input_device_info()
+            else:
+                info = self.audio.get_device_info_by_index(device)
+            
+            return info["maxInputChannels"]
+        except:
+            logger.error('Get Input device of channels error')
+            return 1
     
     def open(self, input_device_index=None, channels=2, rate=44100, frames=None):
         if self.audio is None or self.stream is None:

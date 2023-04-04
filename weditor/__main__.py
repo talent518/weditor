@@ -261,13 +261,9 @@ def main():
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     if args.channels is None:
-        try:
-            args.channels = sound.getChannels(args.device)
-            if args.channels == 0 or args.channels > 2:
-                args.channels = 2
-        except:
-            args.device = None
-            args.channels = 1
+        args.channels = sound.getChannels(args.device)
+        if args.channels == 0 or args.channels > 2:
+            args.channels = 2
     elif args.channels > 2:
         args.channels = 2
 
