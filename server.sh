@@ -20,4 +20,4 @@ if [ -f "$PIDFILE" ]; then
     fi
     rm -vf "$PIDFILE"
 fi
-daemon -rU -M 1000000 -L 10 --name weditor --chdir=$PWD --stdout $PWD/stdout.log --stderr $PWD/stderr.log -- python -m weditor $arg
+daemon -irU -M 1000000 -L 10 --name weditor --chdir=$PWD -- sh -c "python -m weditor $arg < /dev/null >> stdout.log 2>> stderr.log"
