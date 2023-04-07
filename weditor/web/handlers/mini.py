@@ -7,10 +7,113 @@ from tornado.websocket import websocket_connect, WebSocketHandler
 import pyaudio
 import time
 import threading
+import queue
+import cv2
+import numpy as np
+import wave
 import math
 import struct
+import os
 
 cached_devices = {}
+
+class VideoMessage(object):
+    data = None
+    channels = 0
+    def __init__(self, data, channels):
+        self.data = data
+        self.channels = channels
+
+fourcc = cv2.VideoWriter_fourcc('F', 'L', 'V', '1')
+videoPath = None
+audioPath = None
+
+def setVideoPath(path):
+    global videoPath
+    videoPath = path
+
+def setAudioPath(path):
+    global audioPath
+    audioPath = path
+
+def getVideoFile():
+    global videoPath
+    return os.path.join(videoPath, "av-" + time.strftime("%Y%m%d-%H%M%S") + ".flv")
+
+def getAudioFile():
+    global audioPath
+    return os.path.join(audioPath, "av-" + time.strftime("%Y%m%d-%H%M%S") + ".wav")
+
+def avRun():
+    writer = None
+    width = 0
+    height = 0
+    
+    wav = None
+    
+    while True:
+        q = avQueue.get()
+        
+        if q is None:
+            break
+        
+        try:
+            if q.channels > 0:
+                if wav is None or wav.getnchannels() != q.channels:
+                    if wav is not None:
+                        wav.close()
+                    filename = getAudioFile()
+                    wav = wave.open(filename, "wb")
+                    wav.setnchannels(q.channels)
+                    wav.setsampwidth(2)
+                    wav.setframerate(44100)
+                
+                wav.writeframesraw(q.data)
+            else:
+                img = cv2.imdecode(np.fromstring(q.data, dtype=np.uint8), cv2.IMREAD_COLOR)
+                h, w = img.shape[0:2]
+                if writer is None or width != w or height != h:
+                    if writer is not None:
+                        writer.release()
+
+                    filename = getVideoFile()
+                    writer = cv2.VideoWriter(filename, fourcc, 20, (w,h))
+                    width = w
+                    height = h
+                    logger.info("video: filename = %s, width = %d, height = %d" % (filename, w, h))
+                
+                writer.write(img)
+        except Exception as e:
+            logger.error("avRun error: %r" % e)
+    
+    if writer is not None:
+        writer.release()
+        writer = None
+    
+    if wav is not None:
+        wav.close()
+        wav = None
+
+avQueue = queue.Queue(maxsize=20)
+avThread = None
+
+def avPut(data, image, channels):
+    global avThread
+    global avQueue
+    
+    if image or channels > 0:
+        if avThread is not None and not avThread.is_alive():
+            while avQueue.qsize() > 0:
+                avQueue.get_nowait()
+            
+            avThread.join()
+            avThread = None
+        
+        if avThread is None:
+            avThread = threading.Thread(target = avRun, name = 'avRun')
+            avThread.start()
+
+        avQueue.put(VideoMessage(data, channels))
 
 class BaseHandler(WebSocketHandler):
     isSent = True
@@ -20,7 +123,7 @@ class BaseHandler(WebSocketHandler):
     def check_origin(self, origin: str):
         return True
     
-    def send_message(self, msg, bin=False):
+    def send_message(self, msg, bin):
         if self.isSent:
             self.isSent = False
             try:
@@ -53,11 +156,13 @@ class ClientHandler(object):
     handlers = None
     strs = None
     d = None
+    video = False
     
     def __init__(self, id: str, name: str):
         self.handlers = []
         self.strs = {}
         self.id = id + "/" + name
+        self.video = (name == "minicap")
         self.d = get_device(id)
         ws_addr = self.d.device.address.replace("http://", "ws://") # yapf: disable
         url = ws_addr + "/" + name
@@ -78,6 +183,8 @@ class ClientHandler(object):
             self.on_close()
         else:
             # logger.debug("client message: %s", message)
+            if isinstance(message, bytes):
+                avPut(message, True, 0)
             for handler in self.handlers:
                 try:
                     if isinstance(message, bytes):
@@ -221,6 +328,9 @@ class Sound(object):
                 self.thrd.start()
     
     def callback(self, in_data, frame_count, time_info = None, status = None):
+        if time_info is not None:
+            avPut(in_data, False, int(len(in_data) / frame_count / 2))
+        
         for h in self.handlers:
             h.loop.call_soon_threadsafe(h.send_message, in_data, True)
         

@@ -20,7 +20,7 @@ from logzero import logger
 from tornado.log import enable_pretty_logging
 from weditor.web.device import stop_device
 
-from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound
+from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, setVideoPath, avQueue, avThread, setAudioPath
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
@@ -79,6 +79,9 @@ else:
 
 if not os.path.isdir(uploadPath):
     os.makedirs(uploadPath)
+
+setVideoPath(uploadPath)
+setAudioPath(uploadPath)
 
 def make_app(settings={}):
     application = tornado.web.Application(
@@ -196,6 +199,9 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     stop_device(uploadPath)
     shotQueue.put(None)
     shotThread.join(5)
+    avQueue.put(None)
+    if avThread is not None:
+        avThread.join(5)
     
     if os.path.exists(PID_FILEPATH):
         os.unlink(PID_FILEPATH)
