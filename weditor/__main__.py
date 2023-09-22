@@ -197,6 +197,9 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     shotQueue.put(None)
     shotThread.join(5)
     
+    os.system("daemon --stop --name logcat")
+    os.system("daemon --stop --name dmesg")
+    
     if os.path.exists(PID_FILEPATH):
         os.unlink(PID_FILEPATH)
 
