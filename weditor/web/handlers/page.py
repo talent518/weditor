@@ -72,15 +72,18 @@ class DeviceConnectHandler(BaseHandler):
         try:
             id = platform + ":" + device_url
             d = get_device(id)
-            ret = {
-                "deviceId": id,
-                'success': True,
-            }
-            if platform == "android":
-                ret['deviceAddress'] = d.device.address.replace("http://", "ws://") # yapf: disable
-                ret['miniCapUrl'] = "ws://" + self.request.host + "/ws/v1/minicap?deviceId=" + id
-                ret['miniTouchUrl'] = "ws://" + self.request.host + "/ws/v1/minitouch?deviceId=" + id
-            self.write(ret)
+            if d is not None:
+                ret = {
+                    "deviceId": id,
+                    'success': True,
+                }
+                if platform == "android":
+                    ret['deviceAddress'] = d.device.address.replace("http://", "ws://") # yapf: disable
+                    ret['miniCapUrl'] = "ws://" + self.request.host + "/ws/v1/minicap?deviceId=" + id
+                    ret['miniTouchUrl'] = "ws://" + self.request.host + "/ws/v1/minitouch?deviceId=" + id
+                self.write(ret)
+            else:
+                self.write({"success": False, "description": "ADB connect failure"})
         except RuntimeError as e:
             self.set_status(500)
             self.write({
