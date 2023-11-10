@@ -106,6 +106,8 @@ class ClientHandler(object):
     
     def del_handler(self, handler: BaseHandler):
         self.handlers.remove(handler)
+        if len(self.handlers) == 0:
+            self.conn.close(0, 'OK')
     
     def write_message(self, message):
         if self.conn is not None:
