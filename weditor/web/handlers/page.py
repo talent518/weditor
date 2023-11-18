@@ -321,6 +321,13 @@ class DeviceTouchHandler(BaseHandler):
 
 reNum = re.compile('^\d+$')
 
+class DevicePingHandler(BaseHandler):
+    def post(self):
+        serial = self.get_argument("serial")
+        d = get_device(serial)
+        ret = d.device.ping()
+        self.write({"ret": ret})
+
 class DevicePressHandler(BaseHandler):
     def post(self):
         serial = self.get_argument("serial")
