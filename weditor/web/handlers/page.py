@@ -12,6 +12,8 @@ import tornado
 import re
 import threading
 import queue
+import asyncio
+import concurrent.futures
 from logzero import logger
 from PIL import Image
 from tornado.escape import json_decode
@@ -24,11 +26,17 @@ from ..version import __version__
 pathjoin = os.path.join
 
 
-channels=2
-def setChannels(c:int):
-    global channels
-    channels=c
+channels = 2
 
+def setChannels(c):
+    global channels
+    channels = c
+
+async def run_in_executor(func, *args):
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        loop = asyncio.get_event_loop()
+        ret = await loop.run_in_executor(pool, func, *args)
+        return ret
 
 class BaseHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
@@ -72,7 +80,7 @@ class DeviceConnectHandler(BaseHandler):
         try:
             id = platform + ":" + device_url
             d = get_device(id)
-            if d is not None:
+            if d is not None and d.device is not None:
                 ret = {
                     "deviceId": id,
                     'success': True,
@@ -99,15 +107,17 @@ class DeviceConnectHandler(BaseHandler):
             })
 
 class DeviceHierarchyHandler(BaseHandler):
-    def get(self, device_id):
+    async def get(self, device_id):
         d = get_device(device_id)
-        self.write(d.dump_hierarchy())
+        ret = await run_in_executor(d.dump_hierarchy)
+        self.write(ret)
 
 
 class DeviceHierarchyHandlerV2(BaseHandler):
-    def get(self, device_id):
+    async def get(self, device_id):
         d = get_device(device_id)
-        self.write(d.dump_hierarchy2())
+        ret = await run_in_executor(d.dump_hierarchy2)
+        self.write(ret)
 
 
 class WidgetPreviewHandler(BaseHandler):
@@ -296,47 +306,54 @@ class FloatWindowHandler(BaseHandler):
             self.write("action " + action + " invalid")
 
 class DeviceSizeHandler(BaseHandler):
-    def post(self):
+    async def post(self):
         serial = self.get_argument("serial")
         d = get_device(serial)
-        w, h = d.device.window_size()
+        ret = await run_in_executor(d.device.window_size)
+        w, h = ret
         self.write({"width": w, "height": h})
 
 class DeviceTouchHandler(BaseHandler):
-    def post(self):
+    async def post(self):
         serial = self.get_argument("serial")
         action = self.get_argument("action")
         x = int(self.get_argument("x"))
         y = int(self.get_argument("y"))
         d = get_device(serial)
-        if action == 'down':
-            d.device.touch.down(x, y)
-        elif action == 'move':
-            d.device.touch.move(x, y)
-        elif action == 'up':
-            d.device.touch.up(x, y)
-        else:
-            d.device.click(x, y)
+        
+        def run():
+            if action == 'down':
+                d.device.touch.down(x, y)
+            elif action == 'move':
+                d.device.touch.move(x, y)
+            elif action == 'up':
+                d.device.touch.up(x, y)
+            else:
+                d.device.click(x, y)
+        
+        await run_in_executor(run)
         self.write({"success": True})
 
 reNum = re.compile('^\d+$')
 
 class DevicePingHandler(BaseHandler):
-    def post(self):
+    async def post(self):
         serial = self.get_argument("serial")
         d = get_device(serial)
-        ret = d.device.ping()
+        
+        ret = await run_in_executor(d.device.ping)
         self.write({"ret": ret})
 
 class DevicePressHandler(BaseHandler):
-    def post(self):
+    async def post(self):
         serial = self.get_argument("serial")
         key = self.get_argument("key")
         if reNum.match(key):
             key = int(key)
         logger.info("PRESS KEY = " + json.dumps(key))
         d = get_device(serial)
-        ret = d.device.press(key)
+        
+        ret = await run_in_executor(d.device.press, key)
         self.write({"ret": ret})
 
 def formatsize(size: int):
@@ -354,20 +371,21 @@ class ListHandler(BaseHandler):
     root = None
     def initialize(self, path: str) -> None:
         self.root = path
-    def get(self):
+    async def get(self):
         dir = self.get_argument("dir", default="", strip=False)
         root = self.root
         if dir is not None:
             root = os.path.join(self.root, dir)
-        files = []
-        try:
+        
+        def run():
+            files = []
             for name in os.listdir(root):
                 file = os.path.join(root, name)
                 st = os.stat(file)
                 t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
                 files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime, "isdir": os.path.isdir(file)})
-            files.sort(key = filetime, reverse = True)
-            self.render("list.html", files=files, dir=dir)
-        except:
-            self.set_status(404)
-            self.write("Not found: " + dir)
+            files.sort(key=filetime, reverse=True)
+            return files
+        
+        files = await run_in_executor(run)
+        self.render("list.html", files=files, dir=dir)
