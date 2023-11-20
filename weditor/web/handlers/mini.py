@@ -53,6 +53,7 @@ class ClientHandler(object):
     handlers = None
     strs = None
     d = None
+    last = None
     
     def __init__(self, id: str, name: str):
         self.handlers = []
@@ -78,9 +79,12 @@ class ClientHandler(object):
             self.on_close()
         else:
             # logger.debug("client message: %s", message)
+            bin = isinstance(message, bytes)
+            if bin:
+                self.last = message
             for handler in self.handlers:
                 try:
-                    if isinstance(message, bytes):
+                    if bin:
                         handler.send_message(message, True)
                     else:
                         handler.write_message(message, False)
@@ -102,6 +106,8 @@ class ClientHandler(object):
     def add_handler(self, handler: BaseHandler):
         for key, val in self.strs.items():
             handler.write_message(key + " " + val)
+        if self.last is not None:
+            handler.send_message(self.last, True)
         self.handlers.append(handler)
     
     def del_handler(self, handler: BaseHandler):
