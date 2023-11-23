@@ -259,7 +259,7 @@ def screenshot():
             except:
                 break
 
-shotThread = threading.Thread(target = screenshot, name = 'Screenshot')
+shotThread = threading.Thread(target=screenshot, name='Screenshot')
 shotQueue = queue.Queue(maxsize=10)
 
 class DeviceScreenshotHandler(BaseHandler):

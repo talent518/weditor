@@ -9,6 +9,9 @@ import time
 import threading
 import math
 import struct
+import psutil
+import os
+import json
 
 cached_devices = {}
 
@@ -82,6 +85,7 @@ class ClientHandler(object):
             bin = isinstance(message, bytes)
             if bin:
                 self.last = message
+
             for handler in self.handlers:
                 try:
                     if bin:
@@ -126,10 +130,65 @@ def get_client(id, name):
         c = ClientHandler(id, name)
     return c
 
+sysInfoRunning = True
+
+def stop_sys_info():
+    global sysInfoRunning
+    sysInfoRunning = False
+
+def sys_info_thread():
+    global sysInfoRunning
+    
+    while sysInfoRunning:
+        sysInfo = {}
+        cpu = psutil.cpu_percent(interval=0.5)
+        sysInfo['cpuPercent'] = cpu
+        mem = psutil.virtual_memory()
+        sysInfo['memTotal'] = mem.total
+        sysInfo['memPercent'] = mem.percent
+        disks = psutil.disk_partitions(False)
+        usages = []
+        if os.name == 'nt':
+            for path in disks:
+                usages.append(psutil.disk_usage(path))
+        else:
+            map = {}
+            for part in disks:
+                if map.get(part.device) is not None:
+                    continue
+                map[part.device] = True
+                
+                if part.opts.split(',').count('rw') > 0:
+                    usages.append(psutil.disk_usage(part.mountpoint))
+        
+        total = 0
+        used = 0
+        for usage in usages:
+            total += usage.total
+            used += usage.used
+        sysInfo['diskCount'] = len(usages)
+        sysInfo['diskTotal'] = total
+        sysInfo['diskUsed'] = used
+        sysInfo['diskPercent'] = 0
+        if total > 0:
+            sysInfo['diskPercent'] = used * 100 / total
+        
+        sysInfo = '@HostInfo ' + json.dumps(sysInfo)
+        for id in cached_devices:
+            if id.endswith('/minicap'):
+                c = cached_devices[id]
+                for h in c.handlers:
+                    h.loop.call_soon_threadsafe(h.send_message, sysInfo, False)
+
+sysInfoThread = threading.Thread(target=sys_info_thread, name='SysInfo')
+
 class MiniCapHandler(BaseHandler):
     id = ""
     d = None
+    loop = None
+    
     def open(self):
+        self.loop = get_event_loop()
         self.id = self.get_query_argument("deviceId")
         self.d = get_client(self.id, 'minicap')
         self.d.add_handler(self)

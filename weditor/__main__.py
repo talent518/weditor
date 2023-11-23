@@ -20,7 +20,7 @@ from logzero import logger
 from tornado.log import enable_pretty_logging
 from weditor.web.device import stop_device
 
-from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound
+from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, sysInfoThread, stop_sys_info
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
@@ -193,10 +193,12 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     tornado.ioloop.IOLoop.instance().start()
     # tornado.ioloop.IOLoop.instance().add_callback(consume_queue)
 
+    stop_sys_info()
     sound.close()
     stop_device(uploadPath)
     shotQueue.put(None)
     shotThread.join(5)
+    sysInfoThread.join(5)
     
     os.system("daemon --stop --name logcat")
     os.system("daemon --stop --name dmesg")
@@ -274,6 +276,7 @@ def main():
     setChannels(args.channels)
     sound.open(input_device_index=args.device, channels=args.channels)
     shotThread.start()
+    sysInfoThread.start()
 
     open_browser = not args.quiet and not args.debug
     run_web(args.debug, args.port, open_browser, args.force_quit)
