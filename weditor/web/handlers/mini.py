@@ -141,8 +141,8 @@ def sys_info_thread():
     
     while sysInfoRunning:
         sysInfo = {}
-        cpu = psutil.cpu_percent(interval=0.5)
-        sysInfo['cpuPercent'] = cpu
+        sysInfo['cpuCount'] = psutil.cpu_count()
+        sysInfo['cpuPercent'] = psutil.cpu_percent(interval=0.5)
         mem = psutil.virtual_memory()
         sysInfo['memTotal'] = mem.total
         sysInfo['memPercent'] = mem.percent
