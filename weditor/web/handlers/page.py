@@ -341,6 +341,8 @@ class DevicePingHandler(BaseHandler):
         serial = self.get_argument("serial")
         d = get_device(serial)
         
+        if d.device.retries_reset is None:
+        	d.device.retries_reset = 5
         ret = await run_in_executor(d.device.ping)
         self.write({"ret": ret})
 
