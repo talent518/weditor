@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Ignore sound device found: touch .ignore.pcm"
+
 adb root >> init.log 2>&1
 adb tcpip 5555 >> init.log 2>&1
 adb shell "setprop bmi.service.adb.root 1" >> init.log 2>&1
@@ -9,9 +11,11 @@ adb forward --list >> init.log 2>&1
 
 arg="-q"
 
-d=$(grep capture /proc/asound/pcm | sort -r | head -n 1 | awk -F- '{print $1+0;}')
-if [ -n "$d" ]; then
-    arg="$arg -d $d"
+if [ ! -f ".ignore.pcm" ]; then
+    d=$(grep capture /proc/asound/pcm | sort -r | head -n 1 | awk -F- '{print $1+0;}')
+    if [ -n "$d" ]; then
+        arg="$arg -d $d"
+    fi
 fi
 
 daemon --stop --name weditor
