@@ -142,24 +142,20 @@ def sys_info_thread():
     while sysInfoRunning:
         sysInfo = {}
         sysInfo['cpuCount'] = psutil.cpu_count()
-        sysInfo['cpuPercent'] = psutil.cpu_percent(interval=0.5)
+        sysInfo['cpuPercent'] = psutil.cpu_percent(interval=1)
         mem = psutil.virtual_memory()
         sysInfo['memTotal'] = mem.total
         sysInfo['memPercent'] = mem.percent
         disks = psutil.disk_partitions(False)
         usages = []
-        if os.name == 'nt':
-            for path in disks:
-                usages.append(psutil.disk_usage(path))
-        else:
-            map = {}
-            for part in disks:
-                if map.get(part.device) is not None:
-                    continue
-                map[part.device] = True
-                
-                if part.opts.split(',').count('rw') > 0:
-                    usages.append(psutil.disk_usage(part.mountpoint))
+        map = {}
+        for part in disks:
+            if map.get(part.device) is not None:
+                continue
+            map[part.device] = True
+            
+            if part.opts.split(',').count('rw') > 0:
+                usages.append(psutil.disk_usage(part.mountpoint))
         
         total = 0
         used = 0
