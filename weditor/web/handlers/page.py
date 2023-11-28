@@ -358,6 +358,19 @@ class DevicePressHandler(BaseHandler):
         ret = await run_in_executor(d.device.press, key)
         self.write({"ret": ret})
 
+class DeviceTextHandler(BaseHandler):
+    async def post(self):
+        serial = self.get_argument("serial")
+        text = self.get_argument("text")
+        logger.info("TEXT = " + json.dumps(text))
+        d = get_device(serial)
+        
+        def run():
+        	return d.device.shell(['input', 'text', text])[1] == 0
+        
+        ret = await run_in_executor(run)
+        self.write({"ret": ret})
+
 def formatsize(size: int):
     if size < 1024:
         return str(size)

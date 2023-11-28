@@ -26,7 +26,7 @@ from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
     DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotThread, shotQueue,
     DeviceWidgetListHandler, setChannels, MainHandler, VersionHandler, WidgetPreviewHandler,
-    DeviceSizeHandler, DeviceTouchHandler, DevicePingHandler, DevicePressHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
+    DeviceSizeHandler, DeviceTouchHandler, DevicePingHandler, DevicePressHandler, DeviceTextHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
 from .web.handlers.proxy import StaticProxyHandler
 from .web.handlers.shell import PythonShellHandler
 from .web.utils import current_ip, tostr
@@ -92,6 +92,7 @@ def make_app(settings={}):
             (r"/api/v1/touch", DeviceTouchHandler),
             (r"/api/v1/ping", DevicePingHandler),
             (r"/api/v1/press", DevicePressHandler),
+            (r"/api/v1/text", DeviceTextHandler),
             (r"/api/v1/crop", CropHandler),
             (r"/api/v1/devices/([^/]+)/screenshot", DeviceScreenshotHandler),
             (r"/api/v1/devices/([^/]+)/screenrecord/([^/]+)", DeviceScreenrecordHandler, {"path": uploadPath}),
