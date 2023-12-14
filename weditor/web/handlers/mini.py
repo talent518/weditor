@@ -2,7 +2,7 @@
 #
 from asyncio import Future, get_event_loop, ensure_future
 from logzero import logger
-from weditor.web.device import get_device
+from ..device import get_device
 from tornado.websocket import websocket_connect, WebSocketHandler
 import pyaudio
 import time

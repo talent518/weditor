@@ -18,9 +18,9 @@ import tornado.web
 import tornado.websocket
 from logzero import logger
 from tornado.log import enable_pretty_logging
-from weditor.web.device import stop_device
+from .web.device import stop_device
 
-from weditor.web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, sysInfoThread, stop_sys_info
+from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, sysInfoThread, stop_sys_info
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
