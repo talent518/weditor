@@ -60,6 +60,8 @@
           <template v-if="platform == 'Android'">
             <el-switch v-model="liveScreen" active-text="实时" inactive-text="静态">
             </el-switch>
+            <el-switch v-if="liveScreen" v-model="liveDump" active-text="自动" inactive-text="手动">
+            </el-switch>
           </template>
           <button v-on:click="syncSound()" class="btn btn-default"><template v-if="player">停止声音</template><template v-else>播放声音</template></button>
           <a v-if="deviceAddress" :href="deviceAddress + '/remote'" target="_blank">ATX-Agent</a>

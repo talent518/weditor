@@ -3,6 +3,7 @@
 
 import abc
 import os
+import sys
 import time
 
 import uiautomator2 as u2
@@ -40,12 +41,13 @@ class _AndroidDevice(DeviceMeta):
         dmesg = 0
         if r.status_code == 200:
             t = time.strftime("%Y%m%d-%H%M%S", time.localtime(time.time()))
-            stdout = os.path.join(path, "logcat-" + t + ".log")
-            stderr = os.path.join(path, "logcat-" + t + ".err")
-            logcat = os.system("daemon -rU --name logcat --stdout " + stdout + " --stderr " + stderr + " -- adb logcat")
-            stdout = os.path.join(path, "dmesg-" + t + ".log")
-            stderr = os.path.join(path, "dmesg-" + t + ".err")
-            dmesg = os.system("daemon -rU --name dmesg --stdout " + stdout + " --stderr " + stderr + " -- adb shell 'echo \"while dmesg -c;do echo ;done\" | su'")
+            if sys.platform == 'linux':
+                stdout = os.path.join(path, "logcat-" + t + ".log")
+                stderr = os.path.join(path, "logcat-" + t + ".err")
+                logcat = os.system("daemon -rU --name logcat --stdout " + stdout + " --stderr " + stderr + " -- adb logcat")
+                stdout = os.path.join(path, "dmesg-" + t + ".log")
+                stderr = os.path.join(path, "dmesg-" + t + ".err")
+                dmesg = os.system("daemon -rU --name dmesg --stdout " + stdout + " --stderr " + stderr + " -- adb shell 'echo \"while dmesg -c;do echo ;done\" | su'")
             self.isScreenRecord = True
             self.screenRecordTime = t
             
@@ -81,8 +83,12 @@ class _AndroidDevice(DeviceMeta):
                     cmdargs.append(f)
                     files.append(name)
                 r = self._d.shell(cmdargs)
-                logcat = os.system("daemon --stop --name logcat")
-                dmesg = os.system("daemon --stop --name dmesg")
+                if sys.platform == 'linux':
+                    logcat = os.system("daemon --stop --name logcat")
+                    dmesg = os.system("daemon --stop --name dmesg")
+                else:
+                    logcat = 0
+                    dmesg = 0
                 return {"status": True, "files": files, "rmCode": r.exit_code, "output": r.output, "logcat": logcat, "dmesg": dmesg}
             else:
                 return {"status": True, "files": [], "exitCode": 0, "output": ""}

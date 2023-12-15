@@ -201,8 +201,9 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     shotThread.join(5)
     sysInfoThread.join(5)
     
-    os.system("daemon --stop --name logcat")
-    os.system("daemon --stop --name dmesg")
+    if sys.platform == 'linux':
+        os.system("daemon --stop --name logcat")
+        os.system("daemon --stop --name dmesg")
     
     if os.path.exists(PID_FILEPATH):
         os.unlink(PID_FILEPATH)

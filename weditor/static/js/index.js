@@ -32,6 +32,7 @@ window.vm = new Vue({
     screenWebSocket: null,
     miniCapUrl: null,
     liveScreen: false,
+    liveDump: false,
     canvas: {
       bg: null,
       fg: null,
@@ -90,7 +91,7 @@ window.vm = new Vue({
       if (enabled) {
         this.doConnect().then(this.loadLiveScreen)
       } else {
-        this.dumpHierarchyWithScreen()
+        this.liveDump = false;
       }
     },
     useXPathOnly: function () {
@@ -978,11 +979,13 @@ window.vm = new Vue({
         setTimeout(this.loadLiveHierarchy, 500)
         return
       }
-      if (this.liveScreen) {
+      if (this.liveDump) {
         this.dumpHierarchy()
           .then(() => {
             this.loadLiveHierarchy()
           })
+      } else if (this.liveScreen) {
+        setTimeout(this.loadLiveHierarchy, 500)
       }
     },
     loadLiveScreen: function () {
@@ -1006,7 +1009,6 @@ window.vm = new Vue({
         console.log('screen websocket connected')
       };
       ws.onmessage = function (message) {
-        console.log("New message");
         var blob = new Blob([message.data], {
           type: 'image/jpeg'
         })
