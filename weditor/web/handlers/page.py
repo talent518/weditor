@@ -71,11 +71,42 @@ class MainHandler(BaseHandler):
     def get(self):
         self.render("index.html", channels=channels)
 
+async def pipe(reader, writer):
+    try:
+        while not reader.at_eof():
+            writer.write(await reader.read(2048))
+    finally:
+        writer.close()
+
+async def handle_client(local_reader, local_writer):
+    try:
+        remote_reader, remote_writer = await asyncio.open_connection(
+            '127.0.0.1', 7912)
+        pipe1 = pipe(local_reader, remote_writer)
+        pipe2 = pipe(remote_reader, local_writer)
+        await asyncio.gather(pipe1, pipe2)
+    finally:
+        local_writer.close()
+
+atx_tunnels = {}
+async def atx_tunnel(host):
+    global atx_tunnels
+
+    if host != '127.0.0.1' and atx_tunnels.get(host) is None:
+        atx_tunnels[host] = await asyncio.start_server(handle_client, host, 7912)
+        logger.info('atx tunnel host is %s', host)
 
 class DeviceConnectHandler(BaseHandler):
-    def post(self):
+    async def post(self):
         platform = self.get_argument("platform").lower()
         device_url = self.get_argument("deviceUrl")
+
+        is_atx = False
+        try:
+            await atx_tunnel(self.request.host_name)
+            is_atx = True
+        except Exception as e:
+            logger.warning("atx tunnel error: %s", e)
 
         try:
             id = platform + ":" + device_url
@@ -84,6 +115,7 @@ class DeviceConnectHandler(BaseHandler):
                 ret = {
                     "deviceId": id,
                     'success': True,
+                    'isAtx': is_atx,
                 }
                 if platform == "android":
                     ret['deviceAddress'] = d.device.address.replace("http://", "ws://") # yapf: disable
@@ -342,7 +374,8 @@ class DevicePingHandler(BaseHandler):
         d = get_device(serial)
         
         if d.device.retries_reset is None:
-        	d.device.retries_reset = 5
+            d.device.retries_reset = 5
+
         ret = await run_in_executor(d.device.ping)
         self.write({"ret": ret})
 
@@ -366,7 +399,7 @@ class DeviceTextHandler(BaseHandler):
         d = get_device(serial)
         
         def run():
-        	return d.device.shell(['input', 'text', text])[1] == 0
+            return d.device.shell(['input', 'text', text])[1] == 0
         
         ret = await run_in_executor(run)
         self.write({"ret": ret})

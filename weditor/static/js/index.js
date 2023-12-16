@@ -38,7 +38,6 @@ window.vm = new Vue({
       fg: null,
     },
     canvasStyle: {
-      opacity: 0.5,
       width: 'inherit',
       height: 'inherit'
     },
@@ -355,13 +354,11 @@ window.vm = new Vue({
           if (lastScreenshotBase64) {
             var blob = b64toBlob(lastScreenshotBase64, 'image/jpeg');
             this.drawBlobImageToScreen(blob);
-            this.canvasStyle.opacity = 1.0;
           }
           if (localStorage.jsonHierarchy) {
             let source = JSON.parse(localStorage.jsonHierarchy);
             this.drawAllNodeFromSource(source);
             this.loading = false;
-            this.canvasStyle.opacity = 1.0;
           }
         })
         .fail((ret) => {
@@ -489,7 +486,7 @@ window.vm = new Vue({
         .then((ret) => {
           console.log("deviceId", ret.deviceId)
           this.deviceId = ret.deviceId
-          this.deviceAddress = ret.deviceAddress.replace(/^ws:\/\//, 'http://')
+          if(ret.isAtx) this.deviceAddress = 'http://' + location.hostname + ':7912'
           this.miniCapUrl = ret.miniCapUrl
           this.runPython(this.generatePreloadCode())
         })
@@ -638,11 +635,19 @@ window.vm = new Vue({
         document.addEventListener('mouseleave', dragStopListener)
       });
 
+      $('#vertical-gap2').mousedown(function (e) {
+        e.preventDefault();
+        updateFunc = function (evt) {
+          $("#middle").width(evt.clientX - $("#left").width() - 7.5);
+        }
+        document.addEventListener('mousemove', dragMoveListener);
+        document.addEventListener('mouseup', dragStopListener);
+        document.addEventListener('mouseleave', dragStopListener)
+      });
+
       $('.horizon-gap').mousedown(function (e) {
         updateFunc = function (evt) {
-          var $el = $("#console");
-          var y = evt.clientY;
-          $el.height($(window).height() - y)
+          $("#console").height($(window).height() - evt.clientY - 5)
         }
 
         document.addEventListener('mousemove', dragMoveListener);
@@ -879,7 +884,6 @@ window.vm = new Vue({
     dumpHierarchyWithScreen() {
       var self = this;
       this.loading = true;
-      this.canvasStyle.opacity = 0.8;
 
       if (!this.deviceId) {
         return this.doConnect().then(this.dumpHierarchyWithScreen)
@@ -1322,7 +1326,6 @@ window.vm = new Vue({
       this.originNodes = sourceToNodes(source) //ret.nodes;
       this.drawAllNode();
       this.loading = false;
-      this.canvasStyle.opacity = 1.0;
     },
     drawRefresh: function () {
       this.drawAllNode()

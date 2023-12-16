@@ -64,7 +64,7 @@
             </el-switch>
           </template>
           <button v-on:click="syncSound()" class="btn btn-default"><template v-if="player">停止声音</template><template v-else>播放声音</template></button>
-          <a v-if="deviceAddress" :href="deviceAddress + '/remote'" target="_blank">ATX-Agent</a>
+          <a v-if="deviceAddress" :href="deviceAddress" target="_blank">ATX-Agent</a>
         </form>
         <ul class="nav navbar-nav navbar-right">
           <!-- <li><a href="#">Link</a></li> -->
@@ -102,12 +102,10 @@
             <i class="fa fa-chevron-left"></i> Back</button>
           <button class="btn" disabled="true">Menu</button>
         </section>
-        <!-- <div class="horizon-gap"></div> -->
-
       </div>
       <div id="vertical-gap1" class="handle vertical-gap"></div>
 
-      <div class="middle">
+      <div id="middle" class="middle">
         <div class="panel panel-default middle-panel">
           <div class="panel-heading">
             <i class="fa fa-empire" aria-hidden="true"></i> Selected Element
@@ -202,7 +200,7 @@
           <div class="mgbtm audio" v-show="player" ref="audio" @click="resizeAudio()" :style="{height: audioHeight + 'px'}"><span class="left" title="左声道" ref="audioLeft"></span><span class="right" title="右声道" ref="audioRight"></span><canvas ref="audioWave"></canvas></div>
         </div>
       </div>
-      <div class="vertical-gap"></div>
+      <div id="vertical-gap2" class="handle vertical-gap"></div>
       <div id="right">
         <div class="panel panel-default" style="margin-bottom: 0px; border-bottom: 0px">
           <div class="panel-heading">
@@ -240,8 +238,10 @@
           <div id="editor"></div>
         </pre>
 
+        <div class="horizon-gap"></div>
+
         <!-- Colding Area -->
-        <el-tabs type="border-card" v-model="tabActiveName">
+        <el-tabs id="console" type="border-card" v-model="tabActiveName">
           <el-tab-pane label="Hierarchy" name="hierarchy">
             <div class="input-group input-group-sm">
               <div class="input-group-btn">
@@ -261,7 +261,7 @@
             </div>
           </el-tab-pane>
           <el-tab-pane label="Console" name="console">
-            <div id="console">
+            <div>
               <img v-if="codeRunning" src="/static/running.svg">
               <pre
                 ref="console"><span style="cursor: pointer" v-for="data in pyshell.consoleData" @dblclick="gotoCursorLine(data.lineno)" v-text="data.value"></span></pre>
