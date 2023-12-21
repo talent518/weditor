@@ -3,6 +3,7 @@
 echo "Ignore sound device found: touch .ignore.pcm"
 
 adb root >> init.log 2>&1
+adb shell setprop bmi.service.adb.root 1 >> init.log 2>&1
 adb tcpip 5555 >> init.log 2>&1
 adb shell "setprop bmi.service.adb.root 1" >> init.log 2>&1
 python -m uiautomator2 purge >> init.log 2>&1
