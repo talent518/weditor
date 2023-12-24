@@ -3,7 +3,7 @@
 echo "Ignore sound device found: touch .ignore.pcm"
 
 adb tcpip 5555 >> init.log 2>&1
-sleep 2
+sleep 10
 adb root >> init.log 2>&1
 sleep 2
 adb shell setprop bmi.service.adb.root 1 >> init.log 2>&1
