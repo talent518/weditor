@@ -112,7 +112,7 @@ class DeviceConnectHandler(BaseHandler):
             id = platform + ":" + device_url
             d = get_device(id)
             if d is not None and d.device is not None:
-                d.device._prepare_atx_agent();
+                d.device._prepare_atx_agent()
                 ret = {
                     "deviceId": id,
                     'success': True,

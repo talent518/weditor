@@ -99,14 +99,14 @@ class ClientHandler(object):
                 self.strs[key] = val
     
     def on_close(self):
-        logger.info("client close")
+        del cached_devices[self.id]
         
         for handler in self.handlers:
             handler.close()
-        
-        self.handlers.clear()
-        del cached_devices[self.id]
     
+        logger.info("client close")
+        self.conn = None
+
     def add_handler(self, handler: BaseHandler):
         for key, val in self.strs.items():
             handler.write_message(key + " " + val)
@@ -116,7 +116,7 @@ class ClientHandler(object):
     
     def del_handler(self, handler: BaseHandler):
         self.handlers.remove(handler)
-        if len(self.handlers) == 0:
+        if self.conn is not None and len(self.handlers) == 0:
             self.conn.close(0, 'OK')
     
     def write_message(self, message):
