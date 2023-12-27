@@ -43,10 +43,10 @@ class _AndroidDevice(DeviceMeta):
             t = time.strftime("%Y%m%d-%H%M%S", time.localtime(time.time()))
             if sys.platform == 'linux':
                 stdout = os.path.join(path, "logcat-" + t + ".log")
-                stderr = os.path.join(path, "logcat-" + t + ".err")
+                stderr = stdout # os.path.join(path, "logcat-" + t + ".err")
                 logcat = os.system("daemon -rU --name logcat --stdout " + stdout + " --stderr " + stderr + " -- adb logcat")
                 stdout = os.path.join(path, "dmesg-" + t + ".log")
-                stderr = os.path.join(path, "dmesg-" + t + ".err")
+                stderr = stdout # os.path.join(path, "dmesg-" + t + ".err")
                 dmesg = os.system("daemon -rU --name dmesg --stdout " + stdout + " --stderr " + stderr + " -- adb shell 'echo \"while dmesg -c;do echo ;done\" | su'")
             self.isScreenRecord = True
             self.screenRecordTime = t
