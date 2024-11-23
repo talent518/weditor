@@ -12,6 +12,7 @@ import struct
 import psutil
 import os
 import json
+import queue
 
 cached_devices = {}
 
@@ -226,6 +227,7 @@ class Sound(object):
     music: bytes = None
     thrd: threading.Thread = None
     running: bool = True
+    deviceIndex: int = None
     
     def __init__(self) -> None:
         self.handlers = []
@@ -258,6 +260,7 @@ class Sound(object):
                 self.stream.start_stream()
                 # raise Exception("Test Exception")
                 logger.info("Successfully opened the recording function, channels: %d", channels)
+                self.deviceIndex = input_device_index
             except:
                 logger.warn("Failed to open the recording function, channels: %d", channels)
                 self.close()
@@ -280,7 +283,7 @@ class Sound(object):
                         self.callback(self.music, frames)
                         time.sleep(5)
 
-                self.thrd = threading.Thread(target=do_timeout,args=(),name='循环子线程')
+                self.thrd = threading.Thread(target=do_timeout,args=(),name='AudioRecorder')
                 self.thrd.start()
     
     def callback(self, in_data, frame_count, time_info = None, status = None):
@@ -320,6 +323,97 @@ class MiniSoundHandler(BaseHandler):
 
     def on_message(self, message):
         pass
-
+    
     def on_close(self):
         sound.del_handler(self)
+
+class Player(object):
+    running: bool = True
+    isRecord: bool = False
+    msgQueue = None
+
+    def init(self):
+        self.msgQueue = queue.Queue(maxsize=50)
+        self.thrd = threading.Thread(target=self.callback,args=(),name='AudioPlayer')
+        self.thrd.start()
+
+    def start(self):
+        if self.isRecord:
+            return False
+        else:
+            self.isRecord = True
+            return True
+
+    def callback(self):
+        while self.running:
+            if self.isRecord:
+                audio = pyaudio.PyAudio()
+
+                try:
+                    rate = 44100
+                    frames = int(rate * 0.05) # 每秒20帧
+                    stream = audio.open(format=pyaudio.paInt16, channels=2, rate=rate, output=True, frames_per_buffer=frames, output_device_index=sound.deviceIndex)
+                    stream.start_stream()
+                    logger.info('start player')
+                    while self.running:
+                        msg = self.msgQueue.get()
+                        if msg is None:
+                            break
+                        else:
+                            stream.write(msg)
+                    logger.info('stop player')
+                    stream.stop_stream()
+                except Exception as e:
+                    logger.error("Unknown error: %r" % e)
+
+                audio.terminate()
+                
+                try:
+                    while self.msgQueue.get_nowait():
+                        pass
+                except:
+                    pass
+                
+                self.isRecord = False
+            else:
+                time.sleep(0.05)
+        else:
+            return None
+
+    def write(self, message):
+        try:
+            self.msgQueue.put_nowait(message)
+        except:
+            pass
+
+    def stop(self):
+        if self.isRecord:
+            self.msgQueue.put(None)
+
+    def close(self):
+        self.msgQueue.put(None)
+        self.running = False
+        self.thrd.join()
+        self.thrd = None
+
+player: Player = Player()
+
+class MiniPlayerHandler(BaseHandler):
+    isOpen: bool = False
+
+    def open(self):
+        ret = player.start()
+        if ret:
+            self.isOpen = True
+            self.send_message('OpenSuccess', False)
+        else:
+            self.send_message('OpenFailure', False)
+
+    def on_message(self, message):
+        if self.isOpen:
+            player.write(message)
+    
+    def on_close(self):
+        if self.isOpen:
+            self.isOpen = False
+            player.stop()

@@ -20,7 +20,7 @@ from logzero import logger
 from tornado.log import enable_pretty_logging
 from .web.device import stop_device
 
-from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, sysInfoThread, stop_sys_info
+from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, MiniPlayerHandler, player, sysInfoThread, stop_sys_info
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
@@ -117,6 +117,7 @@ def make_app(settings={}):
             (r"/ws/v1/minicap", MiniCapHandler),
             (r"/ws/v1/minitouch", MiniTouchHandler),
             (r"/ws/v1/minisound", MiniSoundHandler),
+            (r"/ws/v1/miniplayer", MiniPlayerHandler),
             (r"/quit", QuitHandler),
         ],
         **settings)
@@ -190,12 +191,15 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     with open(PID_FILEPATH, "w") as f:
         f.write(str(os.getpid()))
 
+    player.init()
+
     tornado.ioloop.PeriodicCallback(try_exit, 100).start()
     tornado.ioloop.IOLoop.instance().start()
     # tornado.ioloop.IOLoop.instance().add_callback(consume_queue)
 
     stop_sys_info()
     sound.close()
+    player.close()
     stop_device(uploadPath)
     shotQueue.put(None)
     shotThread.join(5)
