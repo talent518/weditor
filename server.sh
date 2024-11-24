@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash --login
 
 echo "Ignore sound device found: touch .ignore.pcm"
 echo "Ignore adb and uiautomator2 init: touch .ignore.init"
@@ -44,4 +44,3 @@ if [ -f "$PIDFILE" ]; then
 fi
 
 daemon -irU -M 1000000 -L 10 --name weditor --chdir=$PWD --stdout stdout.log --stderr stderr.log -- python -m weditor $arg $@
-
