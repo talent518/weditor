@@ -100,5 +100,6 @@ debug.xml
 widgets/
 
 .ignore.*
+.weditor.arg
 AUTHORS
 ChangeLog
