@@ -95,7 +95,7 @@ class PythonShellHandler(tornado.websocket.WebSocketHandler):
         env = os.environ.copy()
         env['PYTHONIOENCODING'] = "utf-8"
         self.__process = AsyncSubprocess(
-            [sys.executable, "-u",
+            [sys.executable if sys.executable  else 'python', "-u",
              os.path.join(ROOT_DIR, "../ipyshell-console.py")],
             env=env,
             stdin=Subprocess.STREAM,
