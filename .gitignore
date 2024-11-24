@@ -98,3 +98,7 @@ debug.xml
 
 .DS_Store
 widgets/
+
+.ignore.*
+AUTHORS
+ChangeLog
