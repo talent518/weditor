@@ -259,10 +259,10 @@ class Sound(object):
                 self.stream = self.audio.open(format=pyaudio.paInt16, channels=channels, rate=rate, input=True, frames_per_buffer=frames, stream_callback=self.callback, input_device_index=input_device_index)
                 self.stream.start_stream()
                 # raise Exception("Test Exception")
-                logger.info("Successfully opened the recording function, channels: %d", channels)
+                logger.info("Successfully opened the recording function, device: %d, channels: %d", input_device_index, channels)
                 self.deviceIndex = input_device_index
             except:
-                logger.warn("Failed to open the recording function, channels: %d", channels)
+                logger.warn("Failed to open the recording function, device: %d, channels: %d", input_device_index, channels)
                 self.close()
                 music = bytearray(frames * channels * 2)
                 offset = 0
