@@ -175,7 +175,7 @@ def sys_info_thread():
             if id.endswith('/minicap'):
                 c = cached_devices[id]
                 for h in c.handlers:
-                    h.loop.call_soon_threadsafe(h.send_message, sysInfo, False)
+                    h.loop.call_soon_threadsafe(h.write_message, sysInfo, False)
 
 sysInfoThread = threading.Thread(target=sys_info_thread, name='SysInfo')
 
@@ -404,9 +404,9 @@ class MiniPlayerHandler(BaseHandler):
         ret = player.start()
         if ret:
             self.isOpen = True
-            self.send_message('OpenSuccess', False)
+            self.write_message('OpenSuccess', False)
         else:
-            self.send_message('OpenFailure', False)
+            self.write_message('OpenFailure', False)
 
     def on_message(self, message):
         if self.isOpen:
