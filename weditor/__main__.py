@@ -245,6 +245,7 @@ def main():
     ap = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     ap.add_argument("-d", "--device", type=int, default=None, help="sound input device index")
+    ap.add_argument("-P", "--play", type=int, default=None, help="sound output device index")
     ap.add_argument("-c", "--channels", type=int, default=None, help="capture sound channel number")
     ap.add_argument("-v", "--version", action="store_true", help="show version")
     ap.add_argument('-q', '--quiet', action='store_true', help='quite mode, no open new browser')
@@ -281,6 +282,10 @@ def main():
 
     setChannels(args.channels)
     sound.open(input_device_index=args.device, channels=args.channels)
+    if args.play is None:
+        player.deviceIndex = args.device
+    else:
+        player.deviceIndex = args.play
     shotThread.start()
     sysInfoThread.start()
 

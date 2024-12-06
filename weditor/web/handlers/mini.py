@@ -227,7 +227,6 @@ class Sound(object):
     music: bytes = None
     thrd: threading.Thread = None
     running: bool = True
-    deviceIndex: int = None
     
     def __init__(self) -> None:
         self.handlers = []
@@ -259,10 +258,9 @@ class Sound(object):
                 self.stream = self.audio.open(format=pyaudio.paInt16, channels=channels, rate=rate, input=True, frames_per_buffer=frames, stream_callback=self.callback, input_device_index=input_device_index)
                 self.stream.start_stream()
                 # raise Exception("Test Exception")
-                logger.info("Successfully opened the recording function, device: %d, channels: %d", input_device_index, channels)
-                self.deviceIndex = input_device_index
+                logger.info("Successfully opened the recording function, device: %s, channels: %s", str(input_device_index), str(channels))
             except:
-                logger.warn("Failed to open the recording function, device: %d, channels: %d", input_device_index, channels)
+                logger.warn("Failed to open the recording function, device: %s, channels: %s", str(input_device_index), str(channels))
                 self.close()
                 music = bytearray(frames * channels * 2)
                 offset = 0
@@ -331,6 +329,7 @@ class Player(object):
     running: bool = True
     isRecord: bool = False
     msgQueue = None
+    deviceIndex: int = None
 
     def init(self):
         self.msgQueue = queue.Queue(maxsize=50)
@@ -352,16 +351,16 @@ class Player(object):
                 try:
                     rate = 44100
                     frames = int(rate * 0.05) # 每秒20帧
-                    stream = audio.open(format=pyaudio.paInt16, channels=2, rate=rate, output=True, frames_per_buffer=frames, output_device_index=sound.deviceIndex)
+                    stream = audio.open(format=pyaudio.paInt16, channels=2, rate=rate, output=True, frames_per_buffer=frames, output_device_index=self.deviceIndex)
                     stream.start_stream()
-                    logger.info('start player')
+                    logger.info('start player device: %s', self.deviceIndex)
                     while self.running:
                         msg = self.msgQueue.get()
                         if msg is None:
                             break
                         else:
                             stream.write(msg)
-                    logger.info('stop player')
+                    logger.info('stop player device: %s', self.deviceIndex)
                     stream.stop_stream()
                 except Exception as e:
                     logger.error("Unknown error: %r" % e)
