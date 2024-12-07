@@ -246,10 +246,10 @@ class Sound(object):
             logger.error('Get Input device of channels error')
             return 1
     
-    def open(self, input_device_index=None, channels=2, rate=44100, frames=None):
+    def open(self, input_device_index=None, channels=2, rate=48000, frames=None):
         if self.audio is None or self.stream is None:
             if frames is None:
-                frames = int(rate * 0.05) # 每秒20帧
+                frames = 2048 # int(rate * 0.05) # 每秒20帧
 
             if self.audio is None:
                 self.audio = pyaudio.PyAudio()
@@ -349,8 +349,8 @@ class Player(object):
                 audio = pyaudio.PyAudio()
 
                 try:
-                    rate = 44100
-                    frames = int(rate * 0.05) # 每秒20帧
+                    rate = 48000
+                    frames = 2048 # int(rate * 0.05) # 每秒20帧
                     stream = audio.open(format=pyaudio.paInt16, channels=2, rate=rate, output=True, frames_per_buffer=frames, output_device_index=self.deviceIndex)
                     stream.start_stream()
                     logger.info('start player device: %s', self.deviceIndex)
