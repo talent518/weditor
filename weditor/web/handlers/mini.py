@@ -13,6 +13,7 @@ import psutil
 import os
 import json
 import queue
+import cv2
 
 cached_devices = {}
 
@@ -416,3 +417,88 @@ class MiniPlayerHandler(BaseHandler):
         if self.isOpen:
             self.isOpen = False
             player.stop()
+
+
+cameras = {}
+
+class Camera(object):
+    handlers: list = None
+    thrd: threading.Thread = None
+    path: str = None
+    
+    def __init__(self, path):
+        self.path = path
+        self.handlers = []
+        cameras[self.path] = self
+        self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
+        self.thrd.start()
+    
+    def callback(self):
+        time.sleep(0.2)
+        
+        while len(self.handlers) > 0:
+            cap = cv2.VideoCapture(self.path)
+            # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            if not cap.isOpened():
+                cap.release()
+                time.sleep(5)
+                continue
+            
+            logger.info("camera begin: %s", self.path)
+            
+            t1 = time.time()
+            
+            while len(self.handlers) > 0:
+                t2 = time.time()
+                t = t1 - t2
+                if t > 0:
+                    time.sleep(t)
+                    t1 += 0.05
+                else:
+                    t1 = t2 + 0.05
+                
+                ret, frame = cap.read()
+                if ret:
+                    _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+                    frame = frame.tobytes()
+                    # logger.info('camera frame: %d', len(frame))
+                    
+                    self.send_message(frame)
+                else:
+                    break
+            
+            logger.info("camera end: %s", self.path)
+            
+            cap.release()
+        
+        del cameras[self.path]
+    
+    def add_handler(self, handler: BaseHandler):
+        self.handlers.append(handler)
+    
+    def del_handler(self, handler: BaseHandler):
+        self.handlers.remove(handler)
+
+    def send_message(self, in_data):
+        for h in self.handlers:
+            h.loop.call_soon_threadsafe(h.send_message, in_data, True)
+
+class CameraHandler(BaseHandler):
+    loop = None
+    c: Camera = None
+    
+    def open(self):
+        self.loop = get_event_loop()
+        
+        path = self.get_query_argument("path")
+        self.c = cameras.get(path)
+        if self.c is None:
+            self.c = Camera(path)
+        self.c.add_handler(self)
+
+    def on_message(self, message):
+        pass
+    
+    def on_close(self):
+        self.c.del_handler(self)

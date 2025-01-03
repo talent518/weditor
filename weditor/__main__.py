@@ -20,7 +20,7 @@ from logzero import logger
 from tornado.log import enable_pretty_logging
 from .web.device import stop_device
 
-from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, MiniPlayerHandler, player, sysInfoThread, stop_sys_info
+from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, MiniPlayerHandler, player, sysInfoThread, stop_sys_info, CameraHandler
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler,
@@ -114,6 +114,7 @@ def make_app(settings={}):
             (r"/(cdn.jsdelivr.net/.*)", StaticProxyHandler),
             # (r"/ws/v1/build", BuildWSHandler),
             (r"/ws/v1/python", PythonShellHandler),
+            (r"/ws/v1/camera", CameraHandler),
             (r"/ws/v1/minicap", MiniCapHandler),
             (r"/ws/v1/minitouch", MiniTouchHandler),
             (r"/ws/v1/minisound", MiniSoundHandler),
