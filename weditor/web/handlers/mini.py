@@ -247,10 +247,10 @@ class Sound(object):
             logger.error('Get Input device of channels error')
             return 1
     
-    def open(self, input_device_index=None, channels=2, rate=48000, frames=None):
+    def open(self, input_device_index=None, channels=2, rate=16000, frames=None):
         if self.audio is None or self.stream is None:
             if frames is None:
-                frames = 2048 # int(rate * 0.05) # 每秒20帧
+                frames = 1024 # int(rate * 0.05) # 每秒20帧
 
             if self.audio is None:
                 self.audio = pyaudio.PyAudio()
@@ -350,8 +350,8 @@ class Player(object):
                 audio = pyaudio.PyAudio()
 
                 try:
-                    rate = 48000
-                    frames = 2048 # int(rate * 0.05) # 每秒20帧
+                    rate = 16000
+                    frames = 1024 # int(rate * 0.05) # 每秒20帧
                     stream = audio.open(format=pyaudio.paInt16, channels=2, rate=rate, output=True, frames_per_buffer=frames, output_device_index=self.deviceIndex)
                     stream.start_stream()
                     logger.info('start player device: %s', self.deviceIndex)
@@ -425,9 +425,13 @@ class Camera(object):
     handlers: list = None
     thrd: threading.Thread = None
     path: str = None
+    fps: int = None
+    delay: float = None
     
-    def __init__(self, path):
+    def __init__(self, path, fps):
         self.path = path
+        self.fps = fps
+        self.delay = 1 / fps
         self.handlers = []
         cameras[self.path] = self
         self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
@@ -438,8 +442,9 @@ class Camera(object):
         
         while len(self.handlers) > 0:
             cap = cv2.VideoCapture(self.path)
-            # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            cap.set(cv2.CAP_PROP_FPS, self.fps)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             if not cap.isOpened():
                 cap.release()
                 time.sleep(5)
@@ -447,6 +452,8 @@ class Camera(object):
             
             logger.info("camera begin: %s", self.path)
             
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             t1 = time.time()
             
             while len(self.handlers) > 0:
@@ -454,12 +461,20 @@ class Camera(object):
                 t = t1 - t2
                 if t > 0:
                     time.sleep(t)
-                    t1 += 0.05
+                    t1 += self.delay
                 else:
-                    t1 = t2 + 0.05
+                    t1 = t2 + self.delay
                 
                 ret, frame = cap.read()
                 if ret:
+                    if width > 800 or height > 800:
+                        if width > height:
+                            w = 800
+                            h = int(height * w / width)
+                        else:
+                            h = 800
+                            w = int(width * h / height)
+                        frame = cv2.resize(frame, dsize=(w,h), fx=1, fy=1, interpolation=cv2.INTER_LINEAR)
                     _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
                     frame = frame.tobytes()
                     # logger.info('camera frame: %d', len(frame))
@@ -492,9 +507,12 @@ class CameraHandler(BaseHandler):
         self.loop = get_event_loop()
         
         path = self.get_query_argument("path")
+        fps = int(self.get_query_argument("fps", "20"))
+        if fps < 1:
+            fps = 1
         self.c = cameras.get(path)
         if self.c is None:
-            self.c = Camera(path)
+            self.c = Camera(path, fps)
         self.c.add_handler(self)
 
     def on_message(self, message):
