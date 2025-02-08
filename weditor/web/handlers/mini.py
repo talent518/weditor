@@ -425,9 +425,15 @@ class Camera(object):
     handlers: list = None
     thrd: threading.Thread = None
     path: str = None
+    width: int = None
+    height: int = None
+    fps: int = None
     
-    def __init__(self, path):
+    def __init__(self, path, width, height, fps):
         self.path = path
+        self.width = width
+        self.height = height
+        self.fps = fps
         self.handlers = []
         cameras[self.path] = self
         self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
@@ -438,14 +444,17 @@ class Camera(object):
         
         while len(self.handlers) > 0:
             cap = cv2.VideoCapture(self.path)
-            # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            
+            cap.set(cv2.CAP_PROP_FPS, self.fps)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            
             if not cap.isOpened():
                 cap.release()
                 time.sleep(5)
                 continue
             
-            logger.info("camera begin: %s", self.path)
+            logger.info("camera begin: %s, width: %d, height: %d, fps: %d", self.path, self.width, self.height, self.fps)
             
             t1 = time.time()
             
@@ -492,9 +501,12 @@ class CameraHandler(BaseHandler):
         self.loop = get_event_loop()
         
         path = self.get_query_argument("path")
+        width = int(self.get_query_argument("width", '640'))
+        height = int(self.get_query_argument("height", '480'))
+        fps = int(self.get_query_argument("fps", '15'))
         self.c = cameras.get(path)
         if self.c is None:
-            self.c = Camera(path)
+            self.c = Camera(path, width, height, fps)
         self.c.add_handler(self)
 
     def on_message(self, message):
