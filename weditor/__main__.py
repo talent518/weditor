@@ -165,7 +165,7 @@ def cmd_quit(port=17310):
 
 
 def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
-    base_url = f"http://localhost:{port}"
+    base_url = f"http://127.0.0.1:{port}"
     version = get_running_version(base_url)
     if version:
         if force_quit:
@@ -176,7 +176,7 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
             sys.exit(f"Another weditor({version}) is already running")
 
     if open_browser:
-        webbrowser.open(f'http://localhost:{port}', new=2)
+        webbrowser.open(f'http://127.0.0.1:{port}', new=2)
 
     application = make_app({
         'static_path': os.path.join(__dir__, 'static'),
@@ -187,7 +187,7 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     if debug:
         logger.info("enable debug mode")
     signal.signal(signal.SIGINT, signal_handler)
-    application.listen(port)
+    application.listen(port, '0.0.0.0')
 
     with open(PID_FILEPATH, "w") as f:
         f.write(str(os.getpid()))
