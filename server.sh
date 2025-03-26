@@ -1,5 +1,17 @@
 #!/bin/bash --login
 
+LOCKFILE="$HOME/.weditor/weditor.lock"
+if [ -f $LOCKFILE ]; then
+  pid=$(cat $LOCKFILE)
+  c=$(egrep -c ^server\\.sh /proc/$pid/comm)
+  if [ $c -eq 1 ]; then
+    echo "weditor server shell is locked."
+    exit 1
+  fi
+fi
+
+echo -n $$ > $LOCKFILE
+
 echo "Ignore sound device found: touch .ignore.pcm"
 echo "Ignore adb and uiautomator2 init: touch .ignore.init"
 echo "weditor argument file: .weditor.arg"
@@ -44,3 +56,5 @@ if [ -f "$PIDFILE" ]; then
 fi
 
 daemon -irU -M 1000000 -L 10 --name weditor --chdir=$PWD --stdout stdout.log --stderr stderr.log -- python -m weditor $arg $@
+
+rm -f $LOCKFILE
