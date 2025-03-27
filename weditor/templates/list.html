@@ -15,18 +15,26 @@
   td.r{text-align: right;}
   tr:nth-child(odd){background:#eee;}
   tr:first-child{background:#ccc;}
+  .gray{color:gray;}
+  a{text-decoration:none;}
+  a.dir{color:blue;}
+  a.file{color:green;}
+  a.zip{color:#06F;}
+  a:hover{color:#F60;}
   </style>
  </head>
  <body>
   <table>
   	<tr>
 		<th>文件名</th>
+    <th>类型</th>
 		<th>大小</th>
 		<th>最后修改时间</th>
 	</tr>
 	{% for f in files %}
 	<tr>
-		<td>{% if f["isdir"] %}<a href="?dir={{dir}}{{f["name"]}}/">{{f["name"]}}</a>{%else%}<a href="{{dir}}{{f["name"]}}?mtime={{f["mtime"]}}">{{f["name"]}}</a>{% end %}</td>
+		<td class="gray">{% if f["isdir"] %}<a class="dir" href="?dir={{dir}}{{f["name"]}}/">{{f["name"]}}/</a>{%if f["zip"]%} &nbsp; - &nbsp; <a class="zip" href="?dir={{dir}}{{f["name"]}}&zip=1">zip</a>{%end%}{%else%}<a class="file" href="{{dir}}{{f["name"]}}?mtime={{f["mtime"]}}">{{f["name"]}}</a>{% end %}</td>
+    <td>{% if f["isdir"] %}目录{%else%}文件{% end %}</td>
 		<td title="{{f["size"]}}" class="r">{{f["fsize"]}}</td>
 		<td>{{f["time"]}}</td>
 	</tr>
