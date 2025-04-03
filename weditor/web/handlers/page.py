@@ -21,6 +21,7 @@ from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 
 from ..device import get_device
+from .mini import get_sys_info
 from ..version import __version__
 
 pathjoin = os.path.join
@@ -70,6 +71,12 @@ class VersionHandler(BaseHandler):
 class MainHandler(BaseHandler):
     def get(self):
         self.render("index.html", channels=channels)
+
+
+class SysInfoHandler(BaseHandler):
+    def get(self):
+        self.write(get_sys_info())
+
 
 async def pipe(reader, writer):
     try:

@@ -23,7 +23,7 @@ from .web.device import stop_device
 from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, MiniPlayerHandler, player, sysInfoThread, stop_sys_info, CameraHandler
 
 from .web.handlers.page import (
-    BaseHandler, DeviceConnectHandler,
+    BaseHandler, DeviceConnectHandler, SysInfoHandler,
     DeviceHierarchyHandler, DeviceHierarchyHandlerV2, DeviceScreenshotHandler, shotThread, shotQueue,
     DeviceWidgetListHandler, setChannels, MainHandler, VersionHandler, WidgetPreviewHandler,
     DeviceSizeHandler, DeviceTouchHandler, DevicePingHandler, DevicePressHandler, DeviceTextHandler, ListHandler, DeviceScreenrecordHandler, FloatWindowHandler)
@@ -94,6 +94,7 @@ def make_app(settings={}):
             (r"/api/v1/press", DevicePressHandler),
             (r"/api/v1/text", DeviceTextHandler),
             (r"/api/v1/crop", CropHandler),
+            (r"/api/v1/sysInfo", SysInfoHandler),
             (r"/api/v1/devices/([^/]+)/screenshot", DeviceScreenshotHandler),
             (r"/api/v1/devices/([^/]+)/screenrecord/([^/]+)", DeviceScreenrecordHandler, {"path": uploadPath}),
             (r"/api/v1/devices/([^/]+)/floatwindow/([^/]+)", FloatWindowHandler),
