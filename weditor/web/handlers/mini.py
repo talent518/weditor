@@ -140,8 +140,15 @@ def stop_sys_info():
     global sysInfoRunning
     sysInfoRunning = False
 
+sysInfoData = {}
+
+def get_sys_info():
+    global sysInfoData
+    return sysInfoData
+
 def sys_info_thread():
     global sysInfoRunning
+    global sysInfoData
     
     while sysInfoRunning:
         sysInfo = {}
@@ -172,6 +179,8 @@ def sys_info_thread():
         sysInfo['diskPercent'] = 0
         if total > 0:
             sysInfo['diskPercent'] = used * 100 / total
+        
+        sysInfoData = sysInfo
         
         sysInfo = '@HostInfo ' + json.dumps(sysInfo)
         for id in cached_devices:
