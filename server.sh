@@ -1,21 +1,33 @@
 #!/bin/bash --login
 
+dir=$(realpath $(dirname $0))
+
+LOCKFILE="$HOME/.weditor/weditor.lock"
+if [ -f $LOCKFILE ]; then
+  pid=$(cat $LOCKFILE)
+  c=$(egrep -c ^server\\.sh /proc/$pid/comm)
+  if [ $c -eq 1 ]; then
+    echo "weditor server shell is locked."
+    exit 1
+  fi
+fi
+
+echo -n $$ > $LOCKFILE
+
 echo "Ignore sound device found: touch .ignore.pcm"
 echo "Ignore adb and uiautomator2 init: touch .ignore.init"
 echo "weditor argument file: .weditor.arg"
 
-truncate -s0 *.log
-
 if [ ! -f ".ignore.init" ]; then
-    adb tcpip 5555 >> init.log 2>&1
+    adb tcpip 5555 > $dir/init.log 2>&1
     sleep 10
-    adb root >> init.log 2>&1
+    adb root >> $dir/init.log 2>&1
     sleep 2
-    adb shell setprop bmi.service.adb.root 1 >> init.log 2>&1
-    adb shell "setprop bmi.service.adb.root 1" >> init.log 2>&1
-    python -m uiautomator2 purge >> init.log 2>&1
-    python -m uiautomator2 init >> init.log 2>&1
-    adb forward --list >> init.log 2>&1
+    adb shell setprop bmi.service.adb.root 1 >> $dir/init.log 2>&1
+    adb shell "setprop bmi.service.adb.root 1" >> $dir/init.log 2>&1
+    python -m uiautomator2 purge >> $dir/init.log 2>&1
+    python -m uiautomator2 init >> $dir/init.log 2>&1
+    adb forward --list >> $dir/init.log 2>&1
 fi
 
 arg="-q"
@@ -43,4 +55,6 @@ if [ -f "$PIDFILE" ]; then
     rm -f "$PIDFILE"
 fi
 
-daemon -irU -M 1000000 -L 10 --name weditor --chdir=$PWD --stdout stdout.log --stderr stderr.log -- python -m weditor $arg $@
+daemon -irU -M 1000000 -L 10 --name weditor --chdir=$dir --stdout $dir/stdout.log --stderr $dir/stderr.log -- python -m weditor $arg $@
+
+rm -f $LOCKFILE

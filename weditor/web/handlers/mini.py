@@ -59,12 +59,14 @@ class ClientHandler(object):
     strs = None
     d = None
     last = None
+    isMinicap = None
     
     def __init__(self, id: str, name: str):
         self.handlers = []
         self.strs = {}
         self.id = id + "/" + name
         self.d = get_device(id)
+        self.isMinicap = (name == 'minicap')
         ws_addr = self.d.device.address.replace("http://", "ws://") # yapf: disable
         url = ws_addr + "/" + name
         
@@ -96,7 +98,7 @@ class ClientHandler(object):
                         handler.write_message(message, False)
                 except:
                     pass
-            if isinstance(message, str) and message.__contains__(" "):
+            if self.isMinicap and isinstance(message, str) and message.__contains__(" "):
                 key, val = message.split(" ", maxsplit=1)
                 self.strs[key] = val
     

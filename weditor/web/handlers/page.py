@@ -14,6 +14,7 @@ import threading
 import queue
 import asyncio
 import concurrent.futures
+import zipfile
 from logzero import logger
 from PIL import Image
 from tornado.escape import json_decode
@@ -430,18 +431,38 @@ class ListHandler(BaseHandler):
     async def get(self):
         dir = self.get_argument("dir", default="", strip=False)
         root = self.root
-        if dir is not None:
+        if len(dir) > 0:
             root = os.path.join(self.root, dir)
-        
+
         def run():
             files = []
             for name in os.listdir(root):
                 file = os.path.join(root, name)
                 st = os.stat(file)
                 t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st.st_mtime))
-                files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime, "isdir": os.path.isdir(file)})
+                isdir = os.path.isdir(file)
+                zip = file + '.zip'
+                files.append({"name": name, "size": st.st_size, "fsize": formatsize(st.st_size), "time": t, "mtime": st.st_mtime, "isdir": isdir, "zip": isdir and (not os.path.exists(zip) or os.stat(zip).st_mtime < st.st_mtime)})
             files.sort(key=filetime, reverse=True)
             return files
         
-        files = await run_in_executor(run)
-        self.render("list.html", files=files, dir=dir)
+        if int(self.get_argument("zip", default="0", strip=False)) == 0:
+            files = await run_in_executor(run)
+            self.render("list.html", files=files, dir=dir)
+        else:
+            zfile = root + '.zip'
+            if os.path.exists(zfile):
+                os.remove(zfile)
+            
+            def compress():
+                with zipfile.ZipFile(zfile, 'w', zipfile.ZIP_DEFLATED) as zip:
+                    for path, dirs, files in os.walk(root):
+                        fpath = path.replace(root, '')
+                        for file in files:
+                            fname = os.path.join(path, file)
+                            farc = os.path.join(fpath, file)
+                            print(fname, farc)
+                            zip.write(fname, farc)
+            
+            await run_in_executor(compress)
+            self.redirect(dir + '.zip')
