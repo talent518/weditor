@@ -5,7 +5,7 @@ dir=$(realpath $(dirname $0))
 LOCKFILE="$HOME/.weditor/weditor.lock"
 if [ -f $LOCKFILE ]; then
   pid=$(cat $LOCKFILE)
-  c=$(egrep -c ^server\\.sh /proc/$pid/comm)
+  c=$(egrep -c ^server\\.sh /proc/$pid/comm 2>/dev/null)
   if [ $c -eq 1 ]; then
     echo "weditor server shell is locked."
     exit 1
@@ -18,7 +18,7 @@ echo "Ignore sound device found: touch .ignore.pcm"
 echo "Ignore adb and uiautomator2 init: touch .ignore.init"
 echo "weditor argument file: .weditor.arg"
 
-if [ ! -f ".ignore.init" ]; then
+if [ ! -f "$dir/.ignore.init" ]; then
     adb tcpip 5555 > $dir/init.log 2>&1
     sleep 10
     adb root >> $dir/init.log 2>&1
@@ -32,15 +32,15 @@ fi
 
 arg="-q"
 
-if [ ! -f ".ignore.pcm" ]; then
+if [ ! -f "$dir/.ignore.pcm" ]; then
     d=$(grep capture /proc/asound/pcm | sort -r | head -n 1 | awk -F- '{print $1+0;}')
     if [ -n "$d" ]; then
         arg="$arg -d $d"
     fi
 fi
 
-if [ -f ".weditor.arg" ]; then
-    arg="$arg $(cat .weditor.arg)"
+if [ -f "$dir/.weditor.arg" ]; then
+    arg="$arg $(cat $dir/.weditor.arg)"
 fi
 
 daemon --stop --name weditor
