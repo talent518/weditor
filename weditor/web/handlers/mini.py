@@ -182,7 +182,7 @@ def sys_info_thread():
         
         sysInfoData = sysInfo
         
-        sysInfo = '@HostInfo ' + json.dumps(sysInfo)
+        sysInfo = '@HostInfo ' + json.dumps(sysInfo, separators=(',',':'))
         for id in cached_devices:
             if id.endswith('/minicap'):
                 c = cached_devices[id]
