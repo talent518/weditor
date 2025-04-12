@@ -228,6 +228,7 @@ class DeviceWidgetListHandler(BaseHandler):
         cx, cy = (lx + rx) // 2, (ly + ry) // 2
         # TODO(ssx): missing offset
         # pprint(data)
+        host = self.request.host_name
         widget_data = {
             "resource_id": data["resourceId"],
             "text": data['text'],
@@ -241,11 +242,11 @@ class DeviceWidgetListHandler(BaseHandler):
             "xpath": data['xpath'],
             "target_image": {
                 "size": [rx - lx, ry - ly],
-                "url": f"http://localhost:17310/widgets/{widget_id}/template.jpg",
+                "url": f"http://{host}:17310/widgets/{widget_id}/template.jpg",
             },
             "device_image": {
                 "size": im.size,
-                "url": f"http://localhost:17310/widgets/{widget_id}/screenshot.jpg",
+                "url": f"http://{host}:17310/widgets/{widget_id}/screenshot.jpg",
             },
             # "hierarchy": data['hierarchy'],
         } # yapf: disable
