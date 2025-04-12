@@ -4,6 +4,7 @@ from asyncio import Future, get_event_loop, ensure_future
 from logzero import logger
 from ..device import get_device
 from tornado.websocket import websocket_connect, WebSocketHandler
+from tornado.ioloop import PeriodicCallback
 import pyaudio
 import time
 import threading
@@ -60,6 +61,7 @@ class ClientHandler(object):
     d = None
     last = None
     isMinicap = None
+    timeoutDisconn = None
     
     def __init__(self, id: str, name: str):
         self.handlers = []
@@ -107,7 +109,11 @@ class ClientHandler(object):
         
         for handler in self.handlers:
             handler.close()
-    
+        
+        if self.timeoutDisconn is not None:
+            self.timeoutDisconn.stop()
+            self.timeoutDisconn = None
+        
         logger.info("client close")
         self.conn = None
 
@@ -116,12 +122,19 @@ class ClientHandler(object):
             handler.write_message(key + " " + val)
         if self.last is not None:
             handler.send_message(self.last, True)
+        if self.timeoutDisconn is not None:
+            self.timeoutDisconn.stop()
+            self.timeoutDisconn = None
         self.handlers.append(handler)
     
     def del_handler(self, handler: BaseHandler):
         self.handlers.remove(handler)
-        if self.conn is not None and len(self.handlers) == 0:
-            self.conn.close(0, 'OK')
+        if self.conn is not None and len(self.handlers) == 0 and self.timeoutDisconn is None:
+            def do_timeout():
+                self.conn.close(0, 'OK')
+            
+            self.timeoutDisconn = PeriodicCallback(do_timeout, 5000)
+            self.timeoutDisconn.start()
     
     def write_message(self, message):
         if self.conn is not None:
