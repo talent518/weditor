@@ -5,7 +5,7 @@ dir=$(realpath $(dirname $0))
 LOCKFILE="$HOME/.weditor/weditor.lock"
 if [ -f $LOCKFILE ]; then
   pid=$(cat $LOCKFILE)
-  c=$(egrep -c ^server\\.sh /proc/$pid/comm 2>/dev/null)
+  c=$(egrep -c ^server\\.sh /proc/$pid/comm 2>/dev/null || echo 0)
   if [ $c -eq 1 ]; then
     echo "weditor server shell is locked."
     exit 1
