@@ -250,7 +250,7 @@ window.vm = new Vue({
       }
       const wsUrl = 'ws://' + location.host + '/ws/v1/minisound';
       const self = this;
-      const RATE = 48000;
+      const RATE = 16000;
       let ws;
       self.player = new PCMPlayer({
         inputCodec: 'Int16',
