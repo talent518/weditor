@@ -456,6 +456,7 @@ def camera_stop():
 class Camera(object):
     handlers: list = None
     thrd: threading.Thread = None
+    loop = None
     path: str = None
     width: int = None
     height: int = None
@@ -463,6 +464,7 @@ class Camera(object):
     running: bool = True
 
     def __init__(self, path, width, height, fps):
+        self.loop = get_event_loop()
         self.path = path
         self.width = width
         self.height = height
@@ -550,6 +552,9 @@ class Camera(object):
 
         del cameras[self.path]
 
+        if self.running:
+            self.loop.call_soon_threadsafe(self.stop)
+
     def add_handler(self, handler: BaseHandler):
         self.handlers.append(handler)
 
@@ -564,6 +569,7 @@ class Camera(object):
         self.running = False
         self.thrd.join()
         self.thrd = None
+        logger.info("camera stop: %s", self.path)
 
 class CameraHandler(BaseHandler):
     loop = None
