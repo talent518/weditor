@@ -520,7 +520,7 @@ class Camera(object):
                         if isinstance(frame, np.ndarray):
                             image = Image.frombytes(mode='RGB', size=oldsize, data=frame.tobytes())
                             if newsize is not None:
-                                image.resize(newsize)
+                                image = image.resize(newsize)
                             bio = io.BytesIO()
                             image.save(bio, format='JPEG', quality=90)
                             self.send_message(bio.getvalue())
