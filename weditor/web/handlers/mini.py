@@ -15,6 +15,10 @@ import os
 import json
 import queue
 import cv2
+from PIL import Image
+import numpy as np
+import io
+import traceback
 
 cached_devices = {}
 
@@ -449,73 +453,99 @@ class Camera(object):
     handlers: list = None
     thrd: threading.Thread = None
     path: str = None
+    width: int = None
+    height: int = None
     fps: int = None
-    delay: float = None
-    
-    def __init__(self, path, fps):
+
+    def __init__(self, path, width, height, fps):
         self.path = path
+        self.width = width
+        self.height = height
         self.fps = fps
-        self.delay = 1 / fps
         self.handlers = []
         cameras[self.path] = self
         self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
         self.thrd.start()
-    
+
     def callback(self):
         time.sleep(0.2)
-        
+
         while len(self.handlers) > 0:
             cap = cv2.VideoCapture(self.path)
+
             cap.set(cv2.CAP_PROP_FPS, self.fps)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+
             if not cap.isOpened():
                 cap.release()
                 time.sleep(5)
                 continue
-            
-            logger.info("camera begin: %s", self.path)
-            
+
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+            logger.info("camera begin: %s, width: %d/%d, height: %d/%d, fps: %d", self.path, self.width, width, self.height, height, self.fps)
+
+            oldsize = (width,height)
+
+            newsize = None
+            if width > 800 or height > 800:
+                if width > height:
+                    w = 800
+                    h = int(height * w / width)
+                else:
+                    h = 800
+                    w = int(width * h / height)
+                newsize = (w,h)
+
+            logger.info("oldsize: %s, newsize: %s", oldsize, newsize)
+
             t1 = time.time()
-            
+
             while len(self.handlers) > 0:
                 t2 = time.time()
                 t = t1 - t2
                 if t > 0:
                     time.sleep(t)
-                    t1 += self.delay
+                    t1 += 0.05
                 else:
-                    t1 = t2 + self.delay
-                
+                    t1 = t2 + 0.05
+
                 ret, frame = cap.read()
                 if ret:
-                    if width > 800 or height > 800:
-                        if width > height:
-                            w = 800
-                            h = int(height * w / width)
+                    try:
+                        if isinstance(frame, np.ndarray):
+                            image = Image.frombytes(mode='RGB', size=oldsize, data=frame.tobytes())
+                            if newsize is not None:
+                                image.resize(newsize)
+                            bio = io.BytesIO()
+                            image.save(bio, format='JPEG', quality=90)
+                            self.send_message(bio.getvalue())
                         else:
-                            h = 800
-                            w = int(width * h / height)
-                        frame = cv2.resize(frame, dsize=(w,h), fx=1, fy=1, interpolation=cv2.INTER_LINEAR)
-                    _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-                    frame = frame.tobytes()
-                    # logger.info('camera frame: %d', len(frame))
-                    
-                    self.send_message(frame)
+                            if newsize is not None:
+                                frame = cv2.resize(frame, dsize=newsize, fx=1, fy=1, interpolation=cv2.INTER_LINEAR)
+                            _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+                            frame = frame.tobytes()
+                            # logger.info('camera frame: %d', len(frame))
+
+                            self.send_message(frame)
+                    except:
+                        logger.info("camera error: %s", traceback.format_exc())
                 else:
                     break
-            
+
             logger.info("camera end: %s", self.path)
-            
+
             cap.release()
-        
+
         del cameras[self.path]
-    
+
     def add_handler(self, handler: BaseHandler):
         self.handlers.append(handler)
-    
+
     def del_handler(self, handler: BaseHandler):
         self.handlers.remove(handler)
 
@@ -526,21 +556,22 @@ class Camera(object):
 class CameraHandler(BaseHandler):
     loop = None
     c: Camera = None
-    
+
     def open(self):
         self.loop = get_event_loop()
-        
+
         path = self.get_query_argument("path")
-        fps = int(self.get_query_argument("fps", "20"))
-        if fps < 1:
-            fps = 1
+        width = int(self.get_query_argument("width", '0'))
+        height = int(self.get_query_argument("height", '0'))
+        fps = int(self.get_query_argument("fps", '15'))
+
         self.c = cameras.get(path)
         if self.c is None:
-            self.c = Camera(path, fps)
+            self.c = Camera(path, width, height, fps)
         self.c.add_handler(self)
 
     def on_message(self, message):
         pass
-    
+
     def on_close(self):
         self.c.del_handler(self)
