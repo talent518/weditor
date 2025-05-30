@@ -449,6 +449,10 @@ class MiniPlayerHandler(BaseHandler):
 
 cameras = {}
 
+def camera_stop():
+    for camera in list(cameras.values()):
+        camera.stop()
+
 class Camera(object):
     handlers: list = None
     thrd: threading.Thread = None
@@ -456,6 +460,7 @@ class Camera(object):
     width: int = None
     height: int = None
     fps: int = None
+    running: bool = True
 
     def __init__(self, path, width, height, fps):
         self.path = path
@@ -470,7 +475,7 @@ class Camera(object):
     def callback(self):
         time.sleep(0.2)
 
-        while len(self.handlers) > 0:
+        while self.running and len(self.handlers) > 0:
             cap = cv2.VideoCapture(self.path)
 
             cap.set(cv2.CAP_PROP_FPS, self.fps)
@@ -503,16 +508,18 @@ class Camera(object):
 
             logger.info("oldsize: %s, newsize: %s", oldsize, newsize)
 
+            delay = 1 / self.fps
+            logger.info("delay: %.3f", delay)
             t1 = time.time()
 
-            while len(self.handlers) > 0:
+            while self.running and len(self.handlers) > 0:
                 t2 = time.time()
                 t = t1 - t2
                 if t > 0:
                     time.sleep(t)
-                    t1 += 0.05
+                    t1 += delay
                 else:
-                    t1 = t2 + 0.05
+                    t1 = t2 + delay
 
                 ret, frame = cap.read()
                 if ret:
@@ -552,6 +559,11 @@ class Camera(object):
     def send_message(self, in_data):
         for h in self.handlers:
             h.loop.call_soon_threadsafe(h.send_message, in_data, True)
+
+    def stop(self):
+        self.running = False
+        self.thrd.join()
+        self.thrd = None
 
 class CameraHandler(BaseHandler):
     loop = None

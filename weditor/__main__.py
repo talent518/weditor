@@ -20,7 +20,7 @@ from logzero import logger
 from tornado.log import enable_pretty_logging
 from .web.device import stop_device
 
-from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, MiniPlayerHandler, player, sysInfoThread, stop_sys_info, CameraHandler
+from .web.handlers.mini import MiniCapHandler, MiniTouchHandler, MiniSoundHandler, sound, MiniPlayerHandler, player, sysInfoThread, stop_sys_info, CameraHandler, camera_stop
 
 from .web.handlers.page import (
     BaseHandler, DeviceConnectHandler, SysInfoHandler,
@@ -202,6 +202,7 @@ def run_web(debug=False, port=17310, open_browser=False, force_quit=False):
     stop_sys_info()
     sound.close()
     player.close()
+    camera_stop()
     stop_device(uploadPath)
     shotQueue.put(None)
     shotThread.join(5)
