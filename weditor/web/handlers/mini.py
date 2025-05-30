@@ -452,7 +452,7 @@ class Camera(object):
     width: int = None
     height: int = None
     fps: int = None
-    
+
     def __init__(self, path, width, height, fps):
         self.path = path
         self.width = width
@@ -462,54 +462,60 @@ class Camera(object):
         cameras[self.path] = self
         self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
         self.thrd.start()
-    
+
     def callback(self):
         time.sleep(0.2)
-        
+
         while len(self.handlers) > 0:
             cap = cv2.VideoCapture(self.path)
-            
+
             cap.set(cv2.CAP_PROP_FPS, self.fps)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-            
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+
             if not cap.isOpened():
                 cap.release()
                 time.sleep(5)
                 continue
-            
-            logger.info("camera begin: %s, width: %d, height: %d, fps: %d", self.path, self.width, self.height, self.fps)
-            
+
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+            logger.info("camera begin: %s, width: %d/%d, height: %d/%d, fps: %d", self.path, self.width, width, self.height, height, self.fps)
+
+            delay = 1 / self.fps
             t1 = time.time()
-            
+
             while len(self.handlers) > 0:
                 t2 = time.time()
                 t = t1 - t2
                 if t > 0:
                     time.sleep(t)
-                    t1 += 0.05
+                    t1 += delay
                 else:
-                    t1 = t2 + 0.05
-                
+                    t1 = t2 + delay
+
                 ret, frame = cap.read()
                 if ret:
                     _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
                     frame = frame.tobytes()
                     # logger.info('camera frame: %d', len(frame))
-                    
+
                     self.send_message(frame)
                 else:
                     break
-            
+
             logger.info("camera end: %s", self.path)
-            
+
             cap.release()
-        
+
         del cameras[self.path]
-    
+
     def add_handler(self, handler: BaseHandler):
         self.handlers.append(handler)
-    
+
     def del_handler(self, handler: BaseHandler):
         self.handlers.remove(handler)
 
@@ -520,14 +526,15 @@ class Camera(object):
 class CameraHandler(BaseHandler):
     loop = None
     c: Camera = None
-    
+
     def open(self):
         self.loop = get_event_loop()
-        
+
         path = self.get_query_argument("path")
-        width = int(self.get_query_argument("width", '640'))
-        height = int(self.get_query_argument("height", '480'))
+        width = int(self.get_query_argument("width", '0'))
+        height = int(self.get_query_argument("height", '0'))
         fps = int(self.get_query_argument("fps", '15'))
+
         self.c = cameras.get(path)
         if self.c is None:
             self.c = Camera(path, width, height, fps)
@@ -535,6 +542,6 @@ class CameraHandler(BaseHandler):
 
     def on_message(self, message):
         pass
-    
+
     def on_close(self):
         self.c.del_handler(self)
