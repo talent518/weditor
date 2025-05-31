@@ -376,7 +376,7 @@ class DeviceTouchHandler(BaseHandler):
         await run_in_executor(run)
         self.write({"success": True})
 
-reNum = re.compile('^\d+$')
+reNum = re.compile('^[0-9]+$')
 
 class DevicePingHandler(BaseHandler):
     async def post(self):
