@@ -524,7 +524,12 @@ class Camera(object):
                 t2 = time.time()
                 t = t1 - t2
                 if t > 0:
-                    time.sleep(t)
+                    ret,_ = cap.read()
+                    if ret:
+                        continue
+                    else:
+                        logger.error("camera error: cap.read() return false")
+                        break
                     t1 += delay
                 else:
                     t1 = t2 + delay
