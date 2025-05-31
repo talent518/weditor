@@ -461,14 +461,16 @@ class Camera(object):
     width: int = None
     height: int = None
     fps: int = None
+    crop: int = None
     running: bool = True
 
-    def __init__(self, path, width, height, fps):
+    def __init__(self, path, width, height, fps, crop):
         self.loop = get_event_loop()
         self.path = path
         self.width = width
         self.height = height
         self.fps = fps
+        self.crop = crop
         self.handlers = []
         cameras[self.path] = self
         self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
@@ -525,25 +527,36 @@ class Camera(object):
 
                 ret, frame = cap.read()
                 if ret:
-                    try:
-                        if isinstance(frame, np.ndarray):
-                            image = Image.frombytes(mode='RGB', size=oldsize, data=frame.tobytes())
-                            if newsize is not None:
-                                image = image.resize(newsize)
-                            bio = io.BytesIO()
-                            image.save(bio, format='JPEG', quality=90)
-                            self.send_message(bio.getvalue())
-                        else:
-                            if newsize is not None:
+                    if isinstance(frame, np.ndarray):
+                        try:
+                            if frame.ndim == 2 or frame.shape == (1, width*height):
+                                frame = frame.reshape(height, width, 3)
+
+                            if self.crop >= 1 and self.crop <= 4:
+                                w = int(width / 2)
+                                h = int(height / 2)
+                                if self.crop == 1:
+                                    frame = frame[0:h,0:w,:]
+                                elif self.crop == 2:
+                                    frame = frame[0:h,w:width,:]
+                                elif self.crop == 3:
+                                    frame = frame[h:height,0:w,:]
+                                else:
+                                    frame = frame[h:height,w:width,:]
+                            elif newsize is not None:
                                 frame = cv2.resize(frame, dsize=newsize, fx=1, fy=1, interpolation=cv2.INTER_LINEAR)
-                            _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+
+                            _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
                             frame = frame.tobytes()
                             # logger.info('camera frame: %d', len(frame))
 
                             self.send_message(frame)
-                    except:
-                        logger.info("camera error: %s", traceback.format_exc())
+                        except:
+                            logger.error("camera error: %s", traceback.format_exc())
+                    else:
+                        logger.error("camera type: %s", type(frame))
                 else:
+                    logger.error("camera error: cap.read() return false")
                     break
 
             logger.info("camera end: %s", self.path)
@@ -579,13 +592,14 @@ class CameraHandler(BaseHandler):
         self.loop = get_event_loop()
 
         path = self.get_query_argument("path")
-        width = int(self.get_query_argument("width", '0'))
-        height = int(self.get_query_argument("height", '0'))
+        width = int(self.get_query_argument("width", '1280'))
+        height = int(self.get_query_argument("height", '720'))
         fps = int(self.get_query_argument("fps", '15'))
+        crop = int(self.get_query_argument("crop", '0'))
 
         self.c = cameras.get(path)
         if self.c is None:
-            self.c = Camera(path, width, height, fps)
+            self.c = Camera(path, width, height, fps, crop)
         self.c.add_handler(self)
 
     def on_message(self, message):
