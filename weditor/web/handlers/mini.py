@@ -500,15 +500,19 @@ class Camera(object):
 
             oldsize = (width,height)
 
-            newsize = None
-            if width > 800 or height > 800:
-                if width > height:
-                    w = 800
-                    h = int(height * w / width)
-                else:
-                    h = 800
-                    w = int(width * h / height)
-                newsize = (w,h)
+
+            if self.crop >= 1 and self.crop <= 4:
+                newsize = (int(width/2),int(height/2))
+            else:
+                newsize = None
+                if width > 800 or height > 800:
+                    if width > height:
+                        w = 800
+                        h = int(height * w / width)
+                    else:
+                        h = 800
+                        w = int(width * h / height)
+                    newsize = (w,h)
 
             logger.info("oldsize: %s, newsize: %s", oldsize, newsize)
 
