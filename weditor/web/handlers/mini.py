@@ -496,7 +496,7 @@ class Camera(object):
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-            logger.info("camera begin: %s, width: %d/%d, height: %d/%d, fps: %d", self.path, self.width, width, self.height, height, self.fps)
+            logger.info("camera begin: %s, width: %d/%d, height: %d/%d, fps: %d, crop: %d", self.path, self.width, width, self.height, height, self.fps, self.crop)
 
             oldsize = (width,height)
 
