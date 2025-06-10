@@ -555,7 +555,7 @@ class Camera(object):
                             elif newsize is not None:
                                 frame = cv2.resize(frame, dsize=newsize, fx=1, fy=1, interpolation=cv2.INTER_LINEAR)
 
-                            _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+                            _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
                             frame = frame.tobytes()
                             # logger.info('camera frame: %d', len(frame))
 
