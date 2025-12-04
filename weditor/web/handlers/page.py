@@ -159,7 +159,7 @@ class DeviceConnectHandler(BaseHandler):
                     'isAtx': is_atx,
                 }
                 if platform == "android":
-                    ret['deviceAddress'] = 'ws://127.0.0.1:' + d.atx_agent_port
+                    ret['deviceAddress'] = 'ws://127.0.0.1:' + str(d.atx_agent_port)
                     ret['miniCapUrl'] = "ws://" + self.request.host + "/ws/v1/minicap?deviceId=" + id
                     ret['miniTouchUrl'] = "ws://" + self.request.host + "/ws/v1/minitouch?deviceId=" + id
                 self.write(ret)

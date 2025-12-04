@@ -17,6 +17,9 @@ from . import uidumplib
 from tornado.ioloop import PeriodicCallback
 
 class DeviceMeta(metaclass=abc.ABCMeta):
+    atx_agent_port = None
+    atx_tunnel = None
+    
     @abc.abstractmethod
     def screenshot(self) -> Image.Image:
         pass
@@ -186,7 +189,7 @@ def get_device(id):
 def stop_device(path):
     for d in cached_devices.values():
         if d.atx_agent_port is not None:
-            d.device.adb_device.forward_remove('tcp:' + d.atx_agent_port)
+            d.device.adb_device.forward_remove('tcp:' + str(d.atx_agent_port))
             d.atx_agent_port = None
         d.stop_screenrecord(path)
         # d.device.reset_uiautomator('Stop Device')

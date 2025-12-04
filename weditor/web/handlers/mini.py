@@ -69,7 +69,7 @@ class ClientHandler(object):
         self.id = id + "/" + name
         self.d = get_device(id)
         self.isMinicap = (name == 'minicap')
-        url = 'ws://127.0.0.1:' + self.d.atx_agent_port + '/' + name
+        url = 'ws://127.0.0.1:' + str(self.d.atx_agent_port) + '/' + name
         
         websocket_connect(url, callback=self.on_open, on_message_callback=self.on_message, connect_timeout=10)
         

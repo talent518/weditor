@@ -486,7 +486,7 @@ window.vm = new Vue({
         .then((ret) => {
           console.log("deviceId", ret.deviceId)
           this.deviceId = ret.deviceId
-          if(ret.isAtx) this.deviceAddress = 'http://' + location.hostname + ':7912'
+          if(ret.isAtx) this.deviceAddress = 'http://' + location.hostname + ':' + ret.port
           this.miniCapUrl = ret.miniCapUrl
           this.runPython(this.generatePreloadCode())
         })
