@@ -79,24 +79,6 @@ class SysInfoHandler(BaseHandler):
     def get(self):
         self.write(get_sys_info())
 
-
-async def pipe(reader, writer):
-    try:
-        while not reader.at_eof():
-            writer.write(await reader.read(2048))
-    finally:
-        writer.close()
-
-async def handle_client(local_reader, local_writer):
-    try:
-        remote_reader, remote_writer = await asyncio.open_connection(
-            '127.0.0.1', 7912)
-        pipe1 = pipe(local_reader, remote_writer)
-        pipe2 = pipe(remote_reader, local_writer)
-        await asyncio.gather(pipe1, pipe2)
-    finally:
-        local_writer.close()
-
 def atx_agent_file(d):
     files = ['armeabi-v7a', 'arm64-v8a', 'armeabi', 'x86', 'x86_64']
     name = None
@@ -118,19 +100,36 @@ def prepare_atx_agent(d):
     except:
         logger.error('atx-agent error: %s', traceback.format_exc(limit=1))
         
+        d.shell(["pm", "uninstall", "com.github.uiautomator"])
+        d.shell(["pm", "uninstall", "com.github.uiautomator.test"])
+        d.shell([atx_agent_path, "server", "--stop"])
+
         atx_agent_path = '/data/local/tmp/atx-agent'
         d.push(atx_agent_file(d.adb_device), atx_agent_path, mode=0x755)
         d.push(os.path.join(os.path.dirname(__file__), 'assets', 'app-uiautomator.apk'), '/data/local/tmp/app-uiautomator.apk')
+        d.shell([atx_agent_path, 'server', '-d', "--addr", '127.0.0.1:7912', '--size', '1920', '--quality', '80', '--fps', '20'])
         logger.info('atx-agent running')
-        output = d.shell([atx_agent_path, 'server', '-d', "--addr", '127.0.0.1:7912', '--size', '1920', '--quality', '80', '--fps', '20'])
-        logger.info('atx-agent output: %s', output)
 
-atx_tunnels = {}
-async def atx_tunnel(host):
-    global atx_tunnels
 
-    if host != '127.0.0.1' and atx_tunnels.get(host) is None:
-        atx_tunnels[host] = await asyncio.start_server(handle_client, host, 7912)
+async def pipe(reader, writer):
+    try:
+        while not reader.at_eof():
+            writer.write(await reader.read(2048))
+    finally:
+        writer.close()
+
+async def atx_tunnel(d, host):
+    if host != '127.0.0.1' and d.atx_tunnel.get(host) is None:
+        async def handle_client(local_reader, local_writer):
+            try:
+                remote_reader, remote_writer = await asyncio.open_connection(
+                    '127.0.0.1', d.atx_agent_port)
+                pipe1 = pipe(local_reader, remote_writer)
+                pipe2 = pipe(remote_reader, local_writer)
+                await asyncio.gather(pipe1, pipe2)
+            finally:
+                local_writer.close()
+        d.atx_tunnel[host] = await asyncio.start_server(handle_client, host, d.atx_agent_port)
         logger.info('atx tunnel host is %s', host)
 
 class DeviceConnectHandler(BaseHandler):
@@ -138,25 +137,29 @@ class DeviceConnectHandler(BaseHandler):
         platform = self.get_argument("platform").lower()
         device_url = self.get_argument("deviceUrl")
 
-        is_atx = False
-        try:
-            await atx_tunnel(self.request.host_name)
-            is_atx = True
-        except Exception as e:
-            logger.warning("atx tunnel error: %s", e)
-
         try:
             id = platform + ":" + device_url
             d = get_device(id)
             if d is not None and d.device is not None:
+                if d.atx_agent_port is None:
+                    d.atx_agent_port = d.device.adb_device.forward_port(7912)
+                if d.atx_tunnel is None:
+                    d.atx_tunnel = {}
+                is_atx = False
+                try:
+                    atx_tunnel(d, self.request.host_name)
+                    is_atx = True
+                except Exception as e:
+                    logger.warning("atx tunnel error: %s", e)
                 prepare_atx_agent(d.device)
                 ret = {
                     "deviceId": id,
                     'success': True,
+                    'port': d.atx_agent_port,
                     'isAtx': is_atx,
                 }
                 if platform == "android":
-                    ret['deviceAddress'] = None # d.device.address.replace("http://", "ws://") # yapf: disable
+                    ret['deviceAddress'] = 'ws://127.0.0.1:' + d.atx_agent_port
                     ret['miniCapUrl'] = "ws://" + self.request.host + "/ws/v1/minicap?deviceId=" + id
                     ret['miniTouchUrl'] = "ws://" + self.request.host + "/ws/v1/minitouch?deviceId=" + id
                 self.write(ret)

@@ -185,5 +185,8 @@ def get_device(id):
 
 def stop_device(path):
     for d in cached_devices.values():
+        if d.atx_agent_port is not None:
+            d.device.adb_device.forward_remove('tcp:' + d.atx_agent_port)
+            d.atx_agent_port = None
         d.stop_screenrecord(path)
         # d.device.reset_uiautomator('Stop Device')
