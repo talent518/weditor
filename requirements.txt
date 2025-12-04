@@ -10,5 +10,5 @@ psutil
 opencv-python
 
 # third-party dependencies
-uiautomator2>=2.16.22
+uiautomator2>=3.5.0
 facebook-wda>=1.0.5

@@ -5,8 +5,10 @@ import abc
 import os
 import sys
 import time
+import traceback
 
 import uiautomator2 as u2
+from uiautomator2.core import _http_request
 import wda
 from logzero import logger
 from PIL import Image
@@ -36,10 +38,11 @@ class _AndroidDevice(DeviceMeta):
         self._d = u2.connect(device_url)
 
     def start_screenrecord(self, path):
-        r = self._d.http.post("/screenrecord")
-        logcat = 0
-        dmesg = 0
-        if r.status_code == 200:
+        try:
+            r = _http_request(self._d.adb_device, 7912, 'POST', '/screenrecord')
+            
+            logcat = 0
+            dmesg = 0
             t = time.strftime("%Y%m%d-%H%M%S", time.localtime(time.time()))
             if sys.platform == 'linux':
                 stdout = os.path.join(path, "logcat-" + t + ".log")
@@ -56,16 +59,18 @@ class _AndroidDevice(DeviceMeta):
             
             self.screenrecordTimeout = PeriodicCallback(do_timeout, 30 * 60 * 1000)
             self.screenrecordTimeout.start()
-        
-        return {"status": r.status_code == 200, "message": str(r.text).strip(), "logcat": logcat, "dmesg": dmesg}
+            
+            return {"status": True, "message": str(r.text).strip(), "logcat": logcat, "dmesg": dmesg}
+        except:
+            return {"status": False, "message": traceback.format_exc(limit=1)}
 
     def stop_screenrecord(self, path):
         if self.screenrecordTimeout is not None:
             self.screenrecordTimeout.stop()
             self.screenrecordTimeout = None
         
-        r = self._d.http.put("/screenrecord")
-        if r.status_code == 200:
+        try:
+            r = _http_request(self._d.adb_device, 7912, 'PUT', '/screenrecord')
             if self.isScreenRecord:
                 t = self.screenRecordTime
                 self.isScreenRecord = False
@@ -92,8 +97,8 @@ class _AndroidDevice(DeviceMeta):
                 return {"status": True, "files": files, "rmCode": r.exit_code, "output": r.output, "logcat": logcat, "dmesg": dmesg}
             else:
                 return {"status": True, "files": [], "exitCode": 0, "output": ""}
-        else:
-            return {"status": False, "message": str(r.text).strip()}
+        except:
+            return {"status": False, "message": traceback.format_exc(limit=1)}
 
     def screenshot(self):
         return self._d.screenshot()

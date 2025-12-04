@@ -20,6 +20,7 @@ from PIL import Image
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
+from uiautomator2.core import _http_request
 
 from ..device import get_device
 from .mini import get_sys_info
@@ -96,6 +97,34 @@ async def handle_client(local_reader, local_writer):
     finally:
         local_writer.close()
 
+def atx_agent_file(d):
+    files = ['armeabi-v7a', 'arm64-v8a', 'armeabi', 'x86', 'x86_64']
+    name = None
+    abis = (d.getprop('ro.product.cpu.abilist').strip() or d.getprop('ro.product.cpu.abi')).split(",")
+    for abi in abis:
+        if abi in files:
+            name = abi
+            break
+    if not name:
+        raise Exception(
+            "arch(%s) need to be supported yet, please report an issue in github"
+            % abis)
+    return os.path.join(os.path.dirname(__file__), 'assets', 'atx-agent', name)
+
+def prepare_atx_agent(d):
+    try:
+        r = _http_request(d.adb_device, 7912, 'GET', '/version', timeout=1.0)
+        logger.info('atx-agent version: %s', r.text)
+    except:
+        logger.error('atx-agent error: %s', traceback.format_exc(limit=1))
+        
+        atx_agent_path = '/data/local/tmp/atx-agent'
+        d.push(atx_agent_file(d.adb_device), atx_agent_path, mode=0x755)
+        d.push(os.path.join(os.path.dirname(__file__), 'assets', 'app-uiautomator.apk'), '/data/local/tmp/app-uiautomator.apk')
+        logger.info('atx-agent running')
+        output = d.shell([atx_agent_path, 'server', '-d', "--addr", '127.0.0.1:7912', '--size', '1920', '--quality', '80', '--fps', '20'])
+        logger.info('atx-agent output: %s', output)
+
 atx_tunnels = {}
 async def atx_tunnel(host):
     global atx_tunnels
@@ -120,14 +149,14 @@ class DeviceConnectHandler(BaseHandler):
             id = platform + ":" + device_url
             d = get_device(id)
             if d is not None and d.device is not None:
-                d.device._prepare_atx_agent()
+                prepare_atx_agent(d.device)
                 ret = {
                     "deviceId": id,
                     'success': True,
                     'isAtx': is_atx,
                 }
                 if platform == "android":
-                    ret['deviceAddress'] = d.device.address.replace("http://", "ws://") # yapf: disable
+                    ret['deviceAddress'] = None # d.device.address.replace("http://", "ws://") # yapf: disable
                     ret['miniCapUrl'] = "ws://" + self.request.host + "/ws/v1/minicap?deviceId=" + id
                     ret['miniTouchUrl'] = "ws://" + self.request.host + "/ws/v1/minitouch?deviceId=" + id
                 self.write(ret)
@@ -144,7 +173,7 @@ class DeviceConnectHandler(BaseHandler):
             self.set_status(500)
             self.write({
                 "success": False,
-                "description": traceback.format_exc(),
+                "description": traceback.format_exc(limit=1),
             })
 
 class DeviceHierarchyHandler(BaseHandler):
@@ -291,7 +320,7 @@ def screenshot():
         except RuntimeError as e:
             code = 500
             msg = "Gone"
-            data = {"description": traceback.format_exc()}
+            data = {"description": traceback.format_exc(limit=1)}
         logger.warn("screenshot end")
         
         while True:
