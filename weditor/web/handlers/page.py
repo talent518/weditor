@@ -21,6 +21,7 @@ from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 from tornado.concurrent import Future
 from uiautomator2.core import _http_request
+import adbutils
 
 from ..device import get_device
 from .mini import get_sys_info
@@ -72,7 +73,10 @@ class VersionHandler(BaseHandler):
 
 class MainHandler(BaseHandler):
     def get(self):
-        self.render("index.html", channels=channels)
+        serials = []
+        for dev in adbutils.adb.iter_device():
+            serials.append(dev.serial)
+        self.render("index.html", channels=channels, serials=serials)
 
 
 class SysInfoHandler(BaseHandler):

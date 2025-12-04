@@ -42,11 +42,11 @@
               <option data-icon="fa fa-apple" value="iOS">iOS</option>
               <!-- <option data-icon="glyphicon-apple" value="Neco">Neco(beta)</option> -->
             </select>
-            <!-- <el-select v-model="serial" allow-create filterable placeholder="选择或输入">
+            <el-select v-model="serial" allow-create filterable placeholder="选择或输入">
               <el-option
-                v-for="item in deviceList" :key="item.value" :label="item.label + ':' + item.value" :value="item.value">
+                v-for="serial in serials" :key="serial" :label="serial" :value="serial">
               </el-option>
-            </el-select> -->
+            </el-select>
             <input type="text" v-model="serial" class="form-control" v-bind:placeholder="deviceUrl">
           </div>
           <button type="submit" class="btn btn-default" v-on:click="doConnect" :disabled="connecting">
@@ -317,7 +317,8 @@
 <script src="{{static_url('js/pcm-player.js')}}"></script>
 <script src="{{static_url('js/index.js')}}"></script>
 
-<script>window.vm.channels={{channels}};</script>
+<script>window.vm.channels={% raw json_encode(channels) %};</script>
+<script>window.vm.serials={% raw json_encode(serials) %};</script>
 
 <!-- Baidu Analytics -->
 <script>
