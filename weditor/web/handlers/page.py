@@ -103,15 +103,16 @@ def prepare_atx_agent(d):
         logger.info('atx-agent version: %s', r.text)
     except:
         logger.error('atx-agent error: %s', traceback.format_exc(limit=1))
+
+        atx_agent_path = '/data/local/tmp/atx-agent'
         
         d.shell(["pm", "uninstall", "com.github.uiautomator"])
         d.shell(["pm", "uninstall", "com.github.uiautomator.test"])
         d.shell([atx_agent_path, "server", "--stop"])
 
-        atx_agent_path = '/data/local/tmp/atx-agent'
         d.push(atx_agent_file(d.adb_device), atx_agent_path, mode=0x755)
         d.push(os.path.join(os.path.dirname(__file__), 'assets', 'app-uiautomator.apk'), '/data/local/tmp/app-uiautomator.apk')
-        d.shell([atx_agent_path, 'server', '-d', "--addr", '127.0.0.1:7912', '--size', '1920', '--quality', '80', '--fps', '20'])
+        d.shell([atx_agent_path, 'server', '-d', "--addr", '127.0.0.1:7912', '--size', '1920', '--quality', '90', '--fps', '20'])
         logger.info('atx-agent running')
 
 
@@ -145,17 +146,17 @@ class DeviceConnectHandler(BaseHandler):
             id = platform + ":" + device_url
             d = get_device(id)
             if d is not None and d.device is not None:
+                prepare_atx_agent(d.device)
                 if d.atx_agent_port is None:
                     d.atx_agent_port = d.device.adb_device.forward_port(7912)
                 if d.atx_tunnel is None:
                     d.atx_tunnel = {}
                 is_atx = False
                 try:
-                    atx_tunnel(d, self.request.host_name)
+                    await atx_tunnel(d, self.request.host_name)
                     is_atx = True
                 except Exception as e:
                     logger.warning("atx tunnel error: %s", e)
-                prepare_atx_agent(d.device)
                 ret = {
                     "deviceId": id,
                     'success': True,
