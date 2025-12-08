@@ -25,7 +25,7 @@ if [ ! -f "$dir/.ignore.init" ]; then
     sleep 2
     adb shell setprop bmi.service.adb.root 1 >> $dir/init.log 2>&1
     adb shell "setprop bmi.service.adb.root 1" >> $dir/init.log 2>&1
-    python -m uiautomator2 purge >> $dir/init.log 2>&1
+    # python -m uiautomator2 purge >> $dir/init.log 2>&1
     python -m uiautomator2 init >> $dir/init.log 2>&1
     adb forward --list >> $dir/init.log 2>&1
 fi
