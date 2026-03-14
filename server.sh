@@ -33,7 +33,7 @@ fi
 arg="-q"
 
 if [ ! -f "$dir/.ignore.pcm" ]; then
-    d=$(grep capture /proc/asound/pcm | sort -r | head -n 1 | awk -F- '{print $1+0;}')
+    d=$(grep capture /proc/asound/pcm | awk -F: '{print $1;}' | sort -r | head -n 1 | awk -F- '{printf "hw:%d,%d", $1+0, $2+0;}')
     if [ -n "$d" ]; then
         arg="$arg -d $d"
     fi
