@@ -259,6 +259,24 @@ class Sound(object):
     def __init__(self) -> None:
         self.handlers = []
     
+    def getDevice(self, device):
+        if self.audio is None:
+            self.audio = pyaudio.PyAudio()
+
+        if device is None:
+            return None
+        
+        try:
+            device = '(%s)' % device
+            for i in range(self.audio.get_device_count()):
+                info = self.audio.get_device_info_by_index(i)
+                if device in info['name']:
+                    return info["index"]
+        except:
+            pass
+
+        return None
+    
     def getChannels(self, device):
         if self.audio is None:
             self.audio = pyaudio.PyAudio()
