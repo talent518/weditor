@@ -247,8 +247,8 @@ def main():
     # yapf: disable
     ap = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    ap.add_argument("-d", "--device", type=int, default=None, help="sound input device index")
-    ap.add_argument("-P", "--play", type=int, default=None, help="sound output device index")
+    ap.add_argument("-d", "--device", type=str, default=None, help="sound input device index")
+    ap.add_argument("-P", "--play", type=str, default=None, help="sound output device index")
     ap.add_argument("-c", "--channels", type=int, default=None, help="capture sound channel number")
     ap.add_argument("-v", "--version", action="store_true", help="show version")
     ap.add_argument('-q', '--quiet', action='store_true', help='quite mode, no open new browser')
@@ -272,23 +272,26 @@ def main():
         cmd_quit(args.port)
         return
 
+
     if sys.platform == 'win32' and sys.version_info[:2] >= (3, 8):
         import asyncio
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+    device = sound.getDevice(args.device)
+
     if args.channels is None:
-        args.channels = sound.getChannels(args.device)
+        args.channels = sound.getChannels(device)
         if args.channels == 0 or args.channels > 2:
             args.channels = 2
     elif args.channels > 2:
         args.channels = 2
 
     setChannels(args.channels)
-    sound.open(input_device_index=args.device, channels=args.channels)
+    sound.open(input_device_index=device, channels=args.channels)
     if args.play is None:
-        player.deviceIndex = args.device
+        player.deviceIndex = device
     else:
-        player.deviceIndex = args.play
+        player.deviceIndex = sound.getDevice(args.play)
     shotThread.start()
     sysInfoThread.start()
 
