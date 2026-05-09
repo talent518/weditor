@@ -19,6 +19,7 @@ from PIL import Image
 import numpy as np
 import io
 import traceback
+import platform
 
 cached_devices = {}
 
@@ -478,15 +479,17 @@ class Camera(object):
     path: str = None
     width: int = None
     height: int = None
+    size: int = None
     fps: int = None
     crop: int = None
     running: bool = True
 
-    def __init__(self, path, width, height, fps, crop):
+    def __init__(self, path, width, height, size, fps, crop):
         self.loop = get_event_loop()
         self.path = path
         self.width = width
         self.height = height
+        self.size = size
         self.fps = fps
         self.crop = crop
         self.handlers = []
@@ -498,18 +501,24 @@ class Camera(object):
         time.sleep(0.2)
 
         while self.running and len(self.handlers) > 0:
-            cap = cv2.VideoCapture(self.path)
+            apiPref = cv2.CAP_ANY
+            osName = platform.system()
+            if osName == 'Linux':
+                apiPref = cv2.CAP_V4L2
 
-            cap.set(cv2.CAP_PROP_FPS, self.fps)
-            if self.width:
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-            if self.height:
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-
+            cap = cv2.VideoCapture(self.path, apiPreference=apiPref)
             if not cap.isOpened():
                 cap.release()
                 time.sleep(5)
                 continue
+
+            cap.set(cv2.CAP_PROP_FPS, self.fps)
+            if self.width or self.height:
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
 
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -518,17 +527,16 @@ class Camera(object):
 
             oldsize = (width,height)
 
-
             if self.crop >= 1 and self.crop <= 4:
                 newsize = (int(width/2),int(height/2))
             else:
                 newsize = None
-                if width > 800 or height > 800:
+                if width > self.size or height > self.size:
                     if width > height:
-                        w = 800
+                        w = self.size
                         h = int(height * w / width)
                     else:
-                        h = 800
+                        h = self.size
                         w = int(width * h / height)
                     newsize = (w,h)
 
@@ -619,14 +627,15 @@ class CameraHandler(BaseHandler):
         self.loop = get_event_loop()
 
         path = self.get_query_argument("path")
-        width = int(self.get_query_argument("width", '1280'))
-        height = int(self.get_query_argument("height", '720'))
+        width = int(self.get_query_argument("width", '800'))
+        height = int(self.get_query_argument("height", '600'))
+        size = int(self.get_query_argument("size", '800'))
         fps = int(self.get_query_argument("fps", '15'))
         crop = int(self.get_query_argument("crop", '0'))
 
         self.c = cameras.get(path)
         if self.c is None:
-            self.c = Camera(path, width, height, fps, crop)
+            self.c = Camera(path, width, height, size, fps, crop)
         self.c.add_handler(self)
 
     def on_message(self, message):
