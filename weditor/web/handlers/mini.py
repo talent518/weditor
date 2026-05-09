@@ -15,6 +15,11 @@ import os
 import json
 import queue
 import cv2
+from PIL import Image
+import numpy as np
+import io
+import traceback
+import platform
 
 cached_devices = {}
 
@@ -474,15 +479,19 @@ class Camera(object):
     path: str = None
     width: int = None
     height: int = None
+    size: int = None
     fps: int = None
+    crop: int = None
     running: bool = True
 
-    def __init__(self, path, width, height, fps):
+    def __init__(self, path, width, height, size, fps, crop):
         self.loop = get_event_loop()
         self.path = path
         self.width = width
         self.height = height
+        self.size = size
         self.fps = fps
+        self.crop = crop
         self.handlers = []
         cameras[self.path] = self
         self.thrd = threading.Thread(target=self.callback,args=(),name='Camera:'+path)
@@ -492,23 +501,46 @@ class Camera(object):
         time.sleep(0.2)
 
         while self.running and len(self.handlers) > 0:
-            cap = cv2.VideoCapture(self.path)
+            apiPref = cv2.CAP_ANY
+            osName = platform.system()
+            if osName == 'Linux':
+                apiPref = cv2.CAP_V4L2
 
-            cap.set(cv2.CAP_PROP_FPS, self.fps)
-            if self.width:
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-            if self.height:
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-
+            cap = cv2.VideoCapture(self.path, apiPreference=apiPref)
             if not cap.isOpened():
                 cap.release()
                 time.sleep(5)
                 continue
 
+            cap.set(cv2.CAP_PROP_FPS, self.fps)
+            if self.width or self.height:
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+
             width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-            logger.info("camera begin: %s, width: %d/%d, height: %d/%d, fps: %d", self.path, self.width, width, self.height, height, self.fps)
+            logger.info("camera begin: %s, width: %d/%d, height: %d/%d, fps: %d, crop: %d", self.path, self.width, width, self.height, height, self.fps, self.crop)
+
+            oldsize = (width,height)
+
+            if self.crop >= 1 and self.crop <= 4:
+                newsize = (int(width/2),int(height/2))
+            else:
+                newsize = None
+                if width > self.size or height > self.size:
+                    if width > height:
+                        w = self.size
+                        h = int(height * w / width)
+                    else:
+                        h = self.size
+                        w = int(width * h / height)
+                    newsize = (w,h)
+
+            logger.info("oldsize: %s, newsize: %s", oldsize, newsize)
 
             delay = 1 / self.fps
             logger.info("delay: %.3f", delay)
@@ -530,12 +562,36 @@ class Camera(object):
 
                 ret, frame = cap.read()
                 if ret:
-                    _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-                    frame = frame.tobytes()
-                    # logger.info('camera frame: %d', len(frame))
+                    if isinstance(frame, np.ndarray):
+                        try:
+                            if frame.ndim == 2 or frame.shape == (1, width*height):
+                                frame = frame.reshape(height, width, 3)
 
-                    self.send_message(frame)
+                            if self.crop >= 1 and self.crop <= 4:
+                                w = int(width / 2)
+                                h = int(height / 2)
+                                if self.crop == 1:
+                                    frame = frame[0:h,0:w,:]
+                                elif self.crop == 2:
+                                    frame = frame[0:h,w:width,:]
+                                elif self.crop == 3:
+                                    frame = frame[h:height,0:w,:]
+                                else:
+                                    frame = frame[h:height,w:width,:]
+                            elif newsize is not None:
+                                frame = cv2.resize(frame, dsize=newsize, fx=1, fy=1, interpolation=cv2.INTER_LINEAR)
+
+                            _, frame = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+                            frame = frame.tobytes()
+                            # logger.info('camera frame: %d', len(frame))
+
+                            self.send_message(frame)
+                        except:
+                            logger.error("camera error: %s", traceback.format_exc())
+                    else:
+                        logger.error("camera type: %s", type(frame))
                 else:
+                    logger.error("camera error: cap.read() return false")
                     break
 
             logger.info("camera end: %s", self.path)
@@ -571,13 +627,15 @@ class CameraHandler(BaseHandler):
         self.loop = get_event_loop()
 
         path = self.get_query_argument("path")
-        width = int(self.get_query_argument("width", '0'))
-        height = int(self.get_query_argument("height", '0'))
+        width = int(self.get_query_argument("width", '1280'))
+        height = int(self.get_query_argument("height", '720'))
+        size = int(self.get_query_argument("size", '1280'))
         fps = int(self.get_query_argument("fps", '15'))
+        crop = int(self.get_query_argument("crop", '0'))
 
         self.c = cameras.get(path)
         if self.c is None:
-            self.c = Camera(path, width, height, fps)
+            self.c = Camera(path, width, height, size, fps, crop)
         self.c.add_handler(self)
 
     def on_message(self, message):
